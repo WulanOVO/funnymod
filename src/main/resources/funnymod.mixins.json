@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "yibo.funnymod.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"FishingHookMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
