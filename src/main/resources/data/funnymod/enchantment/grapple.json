@@ -1,7 +1,6 @@
 {
   "description": {
-    "translate": "enchantment.funnymod.grapple",
-    "fallback": "拽引"
+    "translate": "enchantment.funnymod.grapple"
   },
   "supported_items": "minecraft:fishing_rod",
   "weight": 2,

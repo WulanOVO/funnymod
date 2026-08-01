@@ -4,7 +4,11 @@ import net.fabricmc.api.ModInitializer;
 import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import yibo.funnymod.component.ModDataComponents;
 import yibo.funnymod.enchantment.ModEnchantments;
+import yibo.funnymod.entity.ModEntities;
+import yibo.funnymod.item.ModItems;
+import yibo.funnymod.recipe.ModRecipes;
 
 public class Funnymod implements ModInitializer {
 	public static final String MOD_ID = "funnymod";
@@ -13,7 +17,11 @@ public class Funnymod implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModEnchantments.initialize();
-		LOGGER.info("FunnyMod 初始化完成！拽引附魔已就绪~");
+		ModDataComponents.initialize();
+		ModItems.initialize();
+		ModEntities.initialize();
+		ModRecipes.initialize();
+		LOGGER.info("FunnyMod 初始化完成！拽引附魔与雪球混合系统已就绪~");
 	}
 
 	public static Identifier id(String path) {

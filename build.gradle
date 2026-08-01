@@ -36,6 +36,8 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     runtimeOnly "maven.modrinth:sodium:mc26.2-0.9.1-fabric"
+    runtimeOnly "maven.modrinth:modmenu:20.0.1"
+    runtimeOnly "maven.modrinth:jade:26.2.10+fabric"
 }
 
 processResources {

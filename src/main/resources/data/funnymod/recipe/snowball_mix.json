@@ -1,0 +1,9 @@
+{
+  "type": "funnymod:snowball_mix",
+  "target": "#funnymod:snowballs",
+  "additive": "#funnymod:snowball_additives",
+  "result": {
+    "id": "funnymod:mixed_snowball",
+    "count": 1
+  }
+}
