@@ -3,7 +3,9 @@
 	"package": "yibo.funnymod.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"FishingHookMixin"
+		"FishingHookMixin",
+		"LivingEntityMixin",
+		"EntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

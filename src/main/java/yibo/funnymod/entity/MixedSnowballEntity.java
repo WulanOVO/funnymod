@@ -1,7 +1,9 @@
 package yibo.funnymod.entity;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -46,10 +48,16 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
         int flintCount = 0;
         int blazeCount = 0;
         int inkCount = 0;
+        int glowInkCount = 0;
+        int slimeCount = 0;
+        int honeyCount = 0;
         for (var holder : mixedItems) {
             if (holder.value() == Items.FLINT) flintCount++;
             if (holder.value() == Items.BLAZE_POWDER) blazeCount++;
             if (holder.value() == Items.INK_SAC) inkCount++;
+            if (holder.value() == Items.GLOW_INK_SAC) glowInkCount++;
+            if (holder.value() == Items.SLIME_BALL) slimeCount++;
+            if (holder.value() == Items.HONEY_BOTTLE) honeyCount++;
         }
 
         Entity target = hitResult.getEntity();
@@ -66,17 +74,50 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
             living.igniteForSeconds(blazeCount * 1.5f + 1);
         }
 
-        // 墨水遮挡
+        // 墨水遮挡（墨囊）
         if (inkCount > 0 && target instanceof LivingEntity living) {
             int durationTicks = inkCount * 20 + 30;
             int amplifier = inkCount - 1;
 
             living.addEffect(new MobEffectInstance(
-                    BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffects.INK_BLIND),
-                    durationTicks,
-                    amplifier,
-                    false,
-                    false
+                BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffects.INK_BLIND),
+                durationTicks,
+                amplifier,
+                false,
+                false
+            ));
+        }
+
+        // 发光（荧光墨囊）
+        if (glowInkCount > 0 && target instanceof LivingEntity living) {
+            int durationTicks = glowInkCount * 20 + 60;
+            living.addEffect(new MobEffectInstance(MobEffects.GLOWING, durationTicks));
+        }
+
+        // 胶着（粘液球）
+        if (slimeCount > 0 && target instanceof LivingEntity living) {
+            int durationTicks = slimeCount * 30 + 40;
+            int amplifier = slimeCount - 1;
+
+            living.addEffect(new MobEffectInstance(
+                BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffects.STICKY),
+                durationTicks,
+                amplifier,
+                false,
+                false
+            ));
+        }
+
+        // 粘脚（蜂蜜瓶）
+        if (honeyCount > 0 && target instanceof LivingEntity living) {
+            int durationTicks = honeyCount * 30 + 40;
+
+            living.addEffect(new MobEffectInstance(
+                BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffects.STICKY_FEET),
+                durationTicks,
+                0,
+                false,
+                false
             ));
         }
     }
@@ -101,9 +142,9 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                     float roll = this.random.nextFloat();
                     if (roll < 0.20f) {
                         this.level().addFreshEntity(new ItemEntity(
-                                this.level(),
-                                this.getX(), this.getY(), this.getZ(),
-                                new ItemStack(Items.FLINT)
+                            this.level(),
+                            this.getX(), this.getY(), this.getZ(),
+                            new ItemStack(Items.FLINT)
                         ));
                     }
                 }
@@ -121,10 +162,10 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                     if (gunpowderCount > 0) {
                         boolean enableFire = blazeCount > 1;
                         level().explode(
-                                this.getOwner(),
-                                damageSources().thrown(this, this.getOwner()), null,
-                                this.getX(), this.getY(), this.getZ(),
-                                (float) gunpowderCount * 0.3f, enableFire, Level.ExplosionInteraction.BLOCK
+                            this.getOwner(),
+                            damageSources().thrown(this, this.getOwner()), null,
+                            this.getX(), this.getY(), this.getZ(),
+                            (float) gunpowderCount * 0.3f, enableFire, Level.ExplosionInteraction.BLOCK
                         );
                     }
                 }

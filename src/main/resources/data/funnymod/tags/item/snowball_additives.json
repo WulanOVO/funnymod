@@ -3,6 +3,9 @@
     "minecraft:flint",
     "minecraft:blaze_powder",
     "minecraft:gunpowder",
-    "minecraft:ink_sac"
+    "minecraft:ink_sac",
+    "minecraft:glow_ink_sac",
+    "minecraft:slime_ball",
+    "minecraft:honey_bottle"
   ]
 }

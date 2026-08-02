@@ -1,6 +1,5 @@
 package yibo.funnymod.recipe;
 
-import com.mojang.datafixers.kinds.Applicative;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.Holder;

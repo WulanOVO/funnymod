@@ -1,5 +1,7 @@
 {
   "enchantment.funnymod.grapple": "拽引",
   "effect.funnymod.ink_blind": "墨水遮挡",
+  "effect.funnymod.sticky": "胶着",
+  "effect.funnymod.sticky_feet": "粘脚",
   "item.funnymod.mixed_snowball": "混合雪球"
 }
