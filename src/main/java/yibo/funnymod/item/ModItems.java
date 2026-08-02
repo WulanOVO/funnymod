@@ -5,6 +5,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.DispenserBlock;
 import yibo.funnymod.Funnymod;
 
 public class ModItems {
@@ -20,6 +21,8 @@ public class ModItems {
     );
 
     public static void initialize() {
+        // 注册发射器行为，让混合雪球能被发射器射出
+        DispenserBlock.registerProjectileBehavior(MIXED_SNOWBALL);
         Funnymod.LOGGER.info("混合雪球物品已注册！");
     }
 }

@@ -1,5 +1,7 @@
 package yibo.funnymod.entity;
 
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
@@ -14,10 +16,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import yibo.funnymod.component.ModDataComponents;
+import yibo.funnymod.effect.ModEffects;
 import yibo.funnymod.item.ModItems;
 
 public class MixedSnowballEntity extends ThrowableItemProjectile {
-
     public MixedSnowballEntity(EntityType<? extends MixedSnowballEntity> type, Level level) {
         super(type, level);
     }
@@ -43,19 +45,39 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
 
         int flintCount = 0;
         int blazeCount = 0;
+        int inkCount = 0;
         for (var holder : mixedItems) {
             if (holder.value() == Items.FLINT) flintCount++;
             if (holder.value() == Items.BLAZE_POWDER) blazeCount++;
+            if (holder.value() == Items.INK_SAC) inkCount++;
         }
 
         Entity target = hitResult.getEntity();
 
+        // 基础伤害
+        int damage = 0;
         if (flintCount > 0) {
-            target.hurt(this.damageSources().thrown(this, this.getOwner()), flintCount + 1);
+            damage += flintCount + 1;
         }
+        target.hurt(this.damageSources().thrown(this, this.getOwner()), damage);
 
+        // 烈焰粉着火
         if (blazeCount > 0 && target instanceof LivingEntity living) {
             living.igniteForSeconds(blazeCount * 1.5f + 1);
+        }
+
+        // 墨水遮挡
+        if (inkCount > 0 && target instanceof LivingEntity living) {
+            int durationTicks = inkCount * 20 + 30;
+            int amplifier = inkCount - 1;
+
+            living.addEffect(new MobEffectInstance(
+                    BuiltInRegistries.MOB_EFFECT.wrapAsHolder(ModEffects.INK_BLIND),
+                    durationTicks,
+                    amplifier,
+                    false,
+                    false
+            ));
         }
     }
 
@@ -74,6 +96,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                     if (holder.value() == Items.GUNPOWDER) gunpowderCount++;
                 }
 
+                // 燧石掉落
                 if (hasFlint) {
                     float roll = this.random.nextFloat();
                     if (roll < 0.20f) {
@@ -86,6 +109,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                 }
 
                 if (blazeCount > 0) {
+                    // 烈焰粉点燃方块
                     if (blazeCount > 2) {
                         BlockState state = level().getBlockState(this.blockPosition());
                         if (state.isAir() || state.canBeReplaced()) {
@@ -93,6 +117,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                         }
                     }
 
+                    // 烈焰粉和火药的爆炸
                     if (gunpowderCount > 0) {
                         boolean enableFire = blazeCount > 1;
                         level().explode(

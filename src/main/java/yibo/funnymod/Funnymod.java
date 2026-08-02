@@ -5,6 +5,7 @@ import net.minecraft.resources.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import yibo.funnymod.component.ModDataComponents;
+import yibo.funnymod.effect.ModEffects;
 import yibo.funnymod.enchantment.ModEnchantments;
 import yibo.funnymod.entity.ModEntities;
 import yibo.funnymod.item.ModItems;
@@ -18,6 +19,7 @@ public class Funnymod implements ModInitializer {
 	public void onInitialize() {
 		ModEnchantments.initialize();
 		ModDataComponents.initialize();
+		ModEffects.initialize();
 		ModItems.initialize();
 		ModEntities.initialize();
 		ModRecipes.initialize();

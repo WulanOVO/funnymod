@@ -1,4 +1,4 @@
-package yibo.funnymod.client;
+package yibo.funnymod.client.render;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.client.color.item.ItemTintSource;
