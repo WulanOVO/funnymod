@@ -5,8 +5,9 @@
 	"mixins": [
 		"FishingHookMixin",
 		"LivingEntityMixin",
-		"EntityMixin"
-	],
+        "EntityMixin",
+        "SnowGolemMixin"
+    ],
 	"injectors": {
 		"defaultRequire": 1
 	},

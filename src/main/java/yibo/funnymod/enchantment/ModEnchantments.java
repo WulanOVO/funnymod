@@ -15,7 +15,5 @@ public class ModEnchantments {
             ResourceKey.create(Registries.ENCHANTMENT, Funnymod.id("grapple"));
 
     public static void initialize() {
-        // 数据驱动附魔不需要代码注册，这里仅做类加载触发
-        Funnymod.LOGGER.info("拽引附魔 Key 已就绪！");
     }
 }

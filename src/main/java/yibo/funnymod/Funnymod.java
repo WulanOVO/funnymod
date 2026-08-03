@@ -23,7 +23,7 @@ public class Funnymod implements ModInitializer {
 		ModItems.initialize();
 		ModEntities.initialize();
 		ModRecipes.initialize();
-		LOGGER.info("FunnyMod 初始化完成！拽引附魔与雪球混合系统已就绪~");
+		LOGGER.info("FunnyMod 初始化完成！");
 	}
 
 	public static Identifier id(String path) {

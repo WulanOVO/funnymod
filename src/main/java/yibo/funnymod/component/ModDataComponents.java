@@ -23,6 +23,5 @@ public class ModDataComponents {
     public static final int MAX_MIXED_ITEMS = 5;
 
     public static void initialize() {
-        Funnymod.LOGGER.info("混合物品数据组件已注册！");
     }
 }

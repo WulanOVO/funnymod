@@ -23,6 +23,5 @@ public class ModEntities {
     );
 
     public static void initialize() {
-        Funnymod.LOGGER.info("混合雪球实体已注册！");
     }
 }

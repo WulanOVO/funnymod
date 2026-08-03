@@ -32,6 +32,5 @@ public class ModEffects {
     );
 
     public static void initialize() {
-        Funnymod.LOGGER.info("模组药水效果已注册！");
     }
 }

@@ -23,6 +23,5 @@ public class ModItems {
     public static void initialize() {
         // 注册发射器行为，让混合雪球能被发射器射出
         DispenserBlock.registerProjectileBehavior(MIXED_SNOWBALL);
-        Funnymod.LOGGER.info("混合雪球物品已注册！");
     }
 }
