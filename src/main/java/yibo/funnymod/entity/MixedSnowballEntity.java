@@ -1,5 +1,6 @@
 package yibo.funnymod.entity;
 
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -32,6 +33,41 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
 
     public MixedSnowballEntity(Level level, double x, double y, double z, ItemStack itemStack) {
         super(ModEntities.MIXED_SNOWBALL, x, y, z, level, itemStack);
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+
+        // 前 2 tick 不显示粒子，防止近距离遮挡视线
+        if (this.level().isClientSide() && this.tickCount > 2) {
+            var mixedItems = this.getItem().get(ModDataComponents.MIXED_ITEMS);
+            if (mixedItems != null) {
+                int blazeCount = 0;
+                for (var holder : mixedItems) {
+                    if (holder.value() == Items.BLAZE_POWDER) blazeCount++;
+                }
+
+                if (blazeCount > 0 && !this.isInWater()) {
+                    // 火焰粒子密度随烈焰粉数量递增
+                    int flameCount = Math.min(blazeCount, 4);
+                    float smokeChance = Math.min(blazeCount * 0.15f, 0.6f);
+
+                    for (int i = 0; i < flameCount; i++) {
+                        double x = this.getX() + (this.random.nextDouble() - 0.5) * 0.3;
+                        double y = this.getY() + (this.random.nextDouble() - 0.5) * 0.3;
+                        double z = this.getZ() + (this.random.nextDouble() - 0.5) * 0.3;
+                        this.level().addParticle(ParticleTypes.FLAME, x, y, z, 0, 0, 0);
+                    }
+                    if (this.random.nextFloat() < smokeChance) {
+                        double x = this.getX() + (this.random.nextDouble() - 0.5) * 0.2;
+                        double y = this.getY() + (this.random.nextDouble() - 0.5) * 0.2;
+                        double z = this.getZ() + (this.random.nextDouble() - 0.5) * 0.2;
+                        this.level().addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.02, 0);
+                    }
+                }
+            }
+        }
     }
 
     @Override

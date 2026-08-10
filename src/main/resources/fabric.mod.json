@@ -2,10 +2,10 @@
 	"schemaVersion": 1,
 	"id": "funnymod",
 	"version": "${version}",
-	"name": "funnymod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
-	"authors": [
-		"Me!"
+	"name": "Funny Mod",
+	"description": "Just for fun!",
+    "authors": [
+		"WulanOVO"
 	],
 	"contact": {
 		"homepage": "https://fabricmc.net/",
