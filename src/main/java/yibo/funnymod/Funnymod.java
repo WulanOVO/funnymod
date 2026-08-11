@@ -8,6 +8,7 @@ import yibo.funnymod.component.ModDataComponents;
 import yibo.funnymod.effect.ModEffects;
 import yibo.funnymod.enchantment.ModEnchantments;
 import yibo.funnymod.entity.ModEntities;
+import yibo.funnymod.event.ModEvents;
 import yibo.funnymod.item.ModItems;
 import yibo.funnymod.recipe.ModRecipes;
 
@@ -23,6 +24,8 @@ public class Funnymod implements ModInitializer {
 		ModItems.initialize();
 		ModEntities.initialize();
 		ModRecipes.initialize();
+		ModEvents.initialize();
+
 		LOGGER.info("FunnyMod 初始化完成！");
 	}
 

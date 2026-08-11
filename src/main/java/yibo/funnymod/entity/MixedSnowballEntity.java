@@ -40,30 +40,30 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
         super.tick();
 
         // 前 2 tick 不显示粒子，防止近距离遮挡视线
-        if (this.level().isClientSide() && this.tickCount > 2) {
-            var mixedItems = this.getItem().get(ModDataComponents.MIXED_ITEMS);
+        if (level().isClientSide() && tickCount > 2) {
+            var mixedItems = getItem().get(ModDataComponents.MIXED_ITEMS);
             if (mixedItems != null) {
                 int blazeCount = 0;
                 for (var holder : mixedItems) {
                     if (holder.value() == Items.BLAZE_POWDER) blazeCount++;
                 }
 
-                if (blazeCount > 0 && !this.isInWater()) {
+                if (blazeCount > 0 && !isInWater()) {
                     // 火焰粒子密度随烈焰粉数量递增
                     int flameCount = Math.min(blazeCount, 4);
                     float smokeChance = Math.min(blazeCount * 0.15f, 0.6f);
 
                     for (int i = 0; i < flameCount; i++) {
-                        double x = this.getX() + (this.random.nextDouble() - 0.5) * 0.3;
-                        double y = this.getY() + (this.random.nextDouble() - 0.5) * 0.3;
-                        double z = this.getZ() + (this.random.nextDouble() - 0.5) * 0.3;
-                        this.level().addParticle(ParticleTypes.FLAME, x, y, z, 0, 0, 0);
+                        double x = getX() + (random.nextDouble() - 0.5) * 0.3;
+                        double y = getY() + (random.nextDouble() - 0.5) * 0.3;
+                        double z = getZ() + (random.nextDouble() - 0.5) * 0.3;
+                        level().addParticle(ParticleTypes.FLAME, x, y, z, 0, 0, 0);
                     }
-                    if (this.random.nextFloat() < smokeChance) {
-                        double x = this.getX() + (this.random.nextDouble() - 0.5) * 0.2;
-                        double y = this.getY() + (this.random.nextDouble() - 0.5) * 0.2;
-                        double z = this.getZ() + (this.random.nextDouble() - 0.5) * 0.2;
-                        this.level().addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.02, 0);
+                    if (random.nextFloat() < smokeChance) {
+                        double x = getX() + (random.nextDouble() - 0.5) * 0.2;
+                        double y = getY() + (random.nextDouble() - 0.5) * 0.2;
+                        double z = getZ() + (random.nextDouble() - 0.5) * 0.2;
+                        level().addParticle(ParticleTypes.SMOKE, x, y, z, 0, 0.02, 0);
                     }
                 }
             }
@@ -78,7 +78,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
     @Override
     protected void onHitEntity(EntityHitResult hitResult) {
         super.onHitEntity(hitResult);
-        var mixedItems = this.getItem().get(ModDataComponents.MIXED_ITEMS);
+        var mixedItems = getItem().get(ModDataComponents.MIXED_ITEMS);
         if (mixedItems == null || mixedItems.isEmpty()) return;
 
         int flintCount = 0;
@@ -103,7 +103,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
         if (flintCount > 0) {
             damage += flintCount + 1;
         }
-        target.hurt(this.damageSources().thrown(this, this.getOwner()), damage);
+        target.hurt(damageSources().thrown(this, getOwner()), damage);
 
         // 烈焰粉着火
         if (blazeCount > 0 && target instanceof LivingEntity living) {
@@ -161,8 +161,8 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
     @Override
     protected void onHit(HitResult hitResult) {
         super.onHit(hitResult);
-        if (!this.level().isClientSide()) {
-            var mixedItems = this.getItem().get(ModDataComponents.MIXED_ITEMS);
+        if (!level().isClientSide()) {
+            var mixedItems = getItem().get(ModDataComponents.MIXED_ITEMS);
             if (mixedItems != null) {
                 boolean hasFlint = false;
                 int blazeCount = 0;
@@ -175,11 +175,11 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
 
                 // 燧石掉落
                 if (hasFlint) {
-                    float roll = this.random.nextFloat();
+                    float roll = random.nextFloat();
                     if (roll < 0.20f) {
-                        this.level().addFreshEntity(new ItemEntity(
-                            this.level(),
-                            this.getX(), this.getY(), this.getZ(),
+                        level().addFreshEntity(new ItemEntity(
+                            level(),
+                            getX(), getY(), getZ(),
                             new ItemStack(Items.FLINT)
                         ));
                     }
@@ -188,9 +188,9 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                 if (blazeCount > 0) {
                     // 烈焰粉点燃方块
                     if (blazeCount > 2) {
-                        BlockState state = level().getBlockState(this.blockPosition());
+                        BlockState state = level().getBlockState(blockPosition());
                         if (state.isAir() || state.canBeReplaced()) {
-                            level().setBlock(this.blockPosition(), Blocks.FIRE.defaultBlockState(), 3);
+                            level().setBlock(blockPosition(), Blocks.FIRE.defaultBlockState(), 3);
                         }
                     }
 
@@ -198,17 +198,17 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                     if (gunpowderCount > 0) {
                         boolean enableFire = blazeCount > 1;
                         level().explode(
-                            this.getOwner(),
-                            damageSources().thrown(this, this.getOwner()), null,
-                            this.getX(), this.getY(), this.getZ(),
+                            getOwner(),
+                            damageSources().thrown(this, getOwner()), null,
+                            getX(), getY(), getZ(),
                             (float) gunpowderCount * 0.3f, enableFire, Level.ExplosionInteraction.BLOCK
                         );
                     }
                 }
             }
 
-            this.level().broadcastEntityEvent(this, (byte) 3);
-            this.discard();
+            level().broadcastEntityEvent(this, (byte) 3);
+            discard();
         }
     }
 }

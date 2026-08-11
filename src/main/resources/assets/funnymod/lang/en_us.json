@@ -3,5 +3,6 @@
   "effect.funnymod.ink_blind": "Ink Blindness",
   "effect.funnymod.sticky": "Sticky",
   "effect.funnymod.sticky_feet": "Sticky Feet",
-  "item.funnymod.mixed_snowball": "Mixed Snowball"
+  "item.funnymod.mixed_snowball": "Mixed Snowball",
+  "entity.funnymod.suspicious_snow_golem": "Suspicious Snow Golem"
 }

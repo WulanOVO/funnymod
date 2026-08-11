@@ -29,16 +29,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.Funnymod;
 import yibo.funnymod.component.ModDataComponents;
 import yibo.funnymod.entity.MixedSnowballEntity;
+import yibo.funnymod.entity.SuspiciousSnowGolemEntity;
 import yibo.funnymod.entity.goal.SnowGolemPickUpGoal;
 import yibo.funnymod.item.ModItems;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 增强雪傀儡：5格隐藏库存，可拾取 #funnymod:snowball_additives 物品，
- * 发射雪球时从各槽位消耗1个物品揉入混合雪球。
- */
 @Mixin(SnowGolem.class)
 public abstract class SnowGolemMixin extends Mob {
     @Unique
@@ -107,7 +104,7 @@ public abstract class SnowGolemMixin extends Mob {
 
         if (!itemStack.is(SNOWBALL_ADDITIVES)) return;
 
-        // Step 1: 优先放入空槽位（即使已有同类型物品也另起新槽）
+        // 优先放入空槽位（即使已有同类型物品也另起新槽）
         int emptySlot = -1;
         for (int i = 0; i < 5; i++) {
             if (additiveInventory.getItem(i).isEmpty()) {
@@ -127,7 +124,7 @@ public abstract class SnowGolemMixin extends Mob {
             return;
         }
 
-        // Step 2: 槽位全满，尝试补充已有同类型槽位（补货）
+        // 槽位全满，尝试补充已有同类型槽位（补货）
         for (int i = 0; i < 5; i++) {
             ItemStack existing = additiveInventory.getItem(i);
             if (ItemStack.isSameItemSameComponents(existing, itemStack)) {
@@ -169,6 +166,12 @@ public abstract class SnowGolemMixin extends Mob {
     @Inject(method = "aiStep", at = @At("TAIL"))
     private void onAiStep(CallbackInfo ci) {
         if (!(this.level() instanceof ServerLevel)) return;
+
+        // 如果目标变成戴上南瓜的可疑雪傀儡，立即失去仇恨
+        if (this.getTarget() instanceof SuspiciousSnowGolemEntity ssg && ssg.hasPumpkin()) {
+            this.setTarget(null);
+        }
+
         if (snowballCount <= 0 || this.getHealth() >= this.getMaxHealth()) return;
 
         if (healCooldown > 0) {
@@ -194,6 +197,12 @@ public abstract class SnowGolemMixin extends Mob {
      */
     @Inject(method = "performRangedAttack", at = @At("HEAD"), cancellable = true)
     private void onPerformRangedAttack(LivingEntity target, float power, CallbackInfo ci) {
+        // 不攻击戴上南瓜的可疑雪傀儡
+        if (target instanceof SuspiciousSnowGolemEntity ssg && ssg.hasPumpkin()) {
+            ci.cancel();
+            return;
+        }
+
         List<Holder<Item>> consumed = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
             ItemStack stack = additiveInventory.getItem(i);
