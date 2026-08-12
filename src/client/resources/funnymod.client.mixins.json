@@ -3,6 +3,8 @@
   "package": "yibo.funnymod.client.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
+    "CommandHistoryMixin",
+    "ChatComponentMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -35,7 +35,7 @@ import yibo.funnymod.Funnymod;
 
 public class SuspiciousSnowGolemEntity extends Creeper {
     private static final EntityDataAccessor<Byte> DATA_PUMPKIN_ID =
-            SynchedEntityData.defineId(SuspiciousSnowGolemEntity.class, EntityDataSerializers.BYTE);
+        SynchedEntityData.defineId(SuspiciousSnowGolemEntity.class, EntityDataSerializers.BYTE);
     private static final byte PUMPKIN_FLAG = 16;
     private static final int MAX_SNOW_LAYER = 4;
     private static final int MELT_COOLDOWN = 20; // 炎热环境每秒减 1 点雪层
@@ -55,8 +55,8 @@ public class SuspiciousSnowGolemEntity extends Creeper {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MOVEMENT_SPEED, 0.25)
-                .add(Attributes.MAX_HEALTH, 20.0);
+            .add(Attributes.MOVEMENT_SPEED, 0.25)
+            .add(Attributes.MAX_HEALTH, 20.0);
     }
 
     @Override
@@ -78,13 +78,17 @@ public class SuspiciousSnowGolemEntity extends Creeper {
         }
     }
 
-    /** 像雪傀儡一样怕水 */
+    /**
+     * 像雪傀儡一样怕水
+     */
     @Override
     public boolean isSensitiveToWater() {
         return true;
     }
 
-    /** 受到伤害时同步削减雪层；水伤只扣雪层不穿透本体血量 */
+    /**
+     * 受到伤害时同步削减雪层；水伤只扣雪层不穿透本体血量
+     */
     @Override
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
         // 水伤（雨/水/喷溅水瓶）：只削减雪层，不扣本体 HP
@@ -135,7 +139,7 @@ public class SuspiciousSnowGolemEntity extends Creeper {
             if (--meltCooldown <= 0) {
                 meltCooldown = MELT_COOLDOWN;
                 if (serverLevel.environmentAttributes()
-                        .getValue(EnvironmentAttributes.SNOW_GOLEM_MELTS, position()).booleanValue()) {
+                    .getValue(EnvironmentAttributes.SNOW_GOLEM_MELTS, position()).booleanValue()) {
                     reduceSnowLayer(serverLevel, 1);
                 }
             }
@@ -151,9 +155,11 @@ public class SuspiciousSnowGolemEntity extends Creeper {
         } else {
             // 雪层剥落粒子
             Vec3 pos = position();
-            level.sendParticles(ParticleTypes.SNOWFLAKE,
-                    pos.x, pos.y + 1.0, pos.z,
-                    5, 0.3, 0.5, 0.3, 0.02);
+            level.sendParticles(
+                ParticleTypes.SNOWFLAKE,
+                pos.x, pos.y + 1.0, pos.z,
+                5, 0.3, 0.5, 0.3, 0.02
+            );
         }
     }
 
@@ -161,9 +167,10 @@ public class SuspiciousSnowGolemEntity extends Creeper {
         Creeper creeper = EntityTypes.CREEPER.create(serverLevel, EntitySpawnReason.CONVERSION);
         if (creeper == null) return;
 
-        creeper.setPos(getX(), getY(), getZ());
-        creeper.setYRot(getYRot());
-        creeper.setXRot(getXRot());
+        serverLevel.addFreshEntity(creeper);
+        creeper.absSnapTo(getX(), getY(), getZ(), getYRot(), getXRot());
+        creeper.setYHeadRot(getYHeadRot());
+        creeper.setYBodyRot(yBodyRot);
         creeper.setTarget(getTarget());
         if (hasCustomName()) {
             creeper.setCustomName(getCustomName());
@@ -177,11 +184,15 @@ public class SuspiciousSnowGolemEntity extends Creeper {
 
         // 雪层破碎水花
         Vec3 pos = position();
-        serverLevel.sendParticles(ParticleTypes.SPLASH,
-                pos.x, pos.y + 0.5, pos.z,
-                15, 0.5, 0.3, 0.5, 0.05);
-        serverLevel.playSound(null, getX(), getY(), getZ(),
-                SoundEvents.SNOW_BREAK, getSoundSource(), 0.5f, 1.5f);
+        serverLevel.sendParticles(
+            ParticleTypes.SPLASH,
+            pos.x, pos.y + 0.5, pos.z,
+            15, 0.5, 0.3, 0.5, 0.05
+        );
+        serverLevel.playSound(
+            null, getX(), getY(), getZ(),
+            SoundEvents.SNOW_GOLEM_DEATH, getSoundSource(), 0.5f, 1.5f
+        );
 
         serverLevel.addFreshEntity(creeper);
         discard();
@@ -195,8 +206,10 @@ public class SuspiciousSnowGolemEntity extends Creeper {
             if (!level().isClientSide()) {
                 setPumpkin(true);
                 itemStack.consume(1, player);
-                level().playSound(null, getX(), getY(), getZ(),
-                        SoundEvents.SNOW_PLACE, getSoundSource(), 1.0f, 1.0f);
+                level().playSound(
+                    null, getX(), getY(), getZ(),
+                    SoundEvents.SNOW_PLACE, getSoundSource(), 1.0f, 1.0f
+                );
             }
             return InteractionResult.SUCCESS;
         }
@@ -205,8 +218,10 @@ public class SuspiciousSnowGolemEntity extends Creeper {
             if (!level().isClientSide()) {
                 setPumpkin(false);
                 spawnAtLocation((ServerLevel) level(), new ItemStack(Items.CARVED_PUMPKIN));
-                level().playSound(null, getX(), getY(), getZ(),
-                        SoundEvents.SNOW_GOLEM_SHEAR, getSoundSource(), 1.0f, 1.0f);
+                level().playSound(
+                    null, getX(), getY(), getZ(),
+                    SoundEvents.SNOW_GOLEM_SHEAR, getSoundSource(), 1.0f, 1.0f
+                );
             }
             return InteractionResult.SUCCESS;
         }

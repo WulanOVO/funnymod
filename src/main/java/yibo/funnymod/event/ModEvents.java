@@ -47,19 +47,23 @@ public class ModEvents {
     private static InteractionResult onUseEntity(
         Player player, Level level, InteractionHand hand, Entity entity, EntityHitResult entityHitResult
     ) {
-        if (level.isClientSide()) return InteractionResult.PASS;
         if (!(entity instanceof Creeper creeper)) return InteractionResult.PASS;
         if (creeper instanceof SuspiciousSnowGolemEntity) return InteractionResult.PASS;
         if (!player.getItemInHand(hand).is(Items.SNOW_BLOCK)) return InteractionResult.PASS;
+
+        if (level.isClientSide()) return InteractionResult.SUCCESS; // 客户端返回 SUCCESS 触发伸手动画
 
         SuspiciousSnowGolemEntity snowGolem = ModEntities.SUSPICIOUS_SNOW_GOLEM
             .create(level, EntitySpawnReason.CONVERSION);
         if (snowGolem == null) return InteractionResult.PASS;
 
-        snowGolem.setPos(creeper.getX(), creeper.getY(), creeper.getZ());
-        snowGolem.setYRot(creeper.getYRot());
-        snowGolem.setXRot(creeper.getXRot());
+        level.addFreshEntity(snowGolem);
+        snowGolem.absSnapTo(
+            creeper.getX(), creeper.getY(), creeper.getZ(),
+            creeper.getYRot(), creeper.getXRot()
+        );
         snowGolem.setYHeadRot(creeper.getYHeadRot());
+        snowGolem.setYBodyRot(creeper.yBodyRot);
         snowGolem.setHealth(snowGolem.getMaxHealth());
         snowGolem.setTarget(creeper.getTarget());
 
