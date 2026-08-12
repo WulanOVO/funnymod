@@ -2,14 +2,17 @@ package yibo.funnymod.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -17,9 +20,13 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.Snowball;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -32,6 +39,8 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.phys.Vec3;
 import yibo.funnymod.Funnymod;
+import yibo.funnymod.entity.goal.SnowGolemPickUpGoal;
+import yibo.funnymod.item.ModItems;
 
 public class SuspiciousSnowGolemEntity extends Creeper {
     private static final EntityDataAccessor<Byte> DATA_PUMPKIN_ID =
@@ -39,14 +48,18 @@ public class SuspiciousSnowGolemEntity extends Creeper {
     private static final byte PUMPKIN_FLAG = 16;
     private static final int MAX_SNOW_LAYER = 4;
     private static final int MELT_COOLDOWN = 20; // 炎热环境每秒减 1 点雪层
+    private static final int MAX_SNOWBALLS = 16;
+    private static final TagKey<Item> SNOWBALLS_TAG = TagKey.create(Registries.ITEM, Funnymod.id("snowballs"));
 
     private int snowLayerHealth = MAX_SNOW_LAYER;
     private int meltCooldown = MELT_COOLDOWN;
     private boolean playerCreated = false;
     private boolean firstTickDone = false;
+    private final SimpleContainer snowballInventory = new SimpleContainer(16);
 
     public SuspiciousSnowGolemEntity(EntityType<? extends SuspiciousSnowGolemEntity> type, Level level) {
         super(type, level);
+        this.setCanPickUpLoot(true);
     }
 
     public void markPlayerCreated() {
@@ -182,6 +195,15 @@ public class SuspiciousSnowGolemEntity extends Creeper {
             spawnAtLocation(serverLevel, new ItemStack(Items.CARVED_PUMPKIN));
         }
 
+        // 掉落雪球背包
+        for (int i = 0; i < snowballInventory.getContainerSize(); i++) {
+            ItemStack stack = snowballInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                spawnAtLocation(serverLevel, stack);
+                snowballInventory.setItem(i, ItemStack.EMPTY);
+            }
+        }
+
         // 雪层破碎水花
         Vec3 pos = position();
         serverLevel.sendParticles(
@@ -229,12 +251,125 @@ public class SuspiciousSnowGolemEntity extends Creeper {
     }
 
     @Override
+    protected void registerGoals() {
+        super.registerGoals();
+        this.goalSelector.addGoal(2, new SnowGolemPickUpGoal(this, 1.0, 10.0));
+    }
+
+    /**
+     * 只拾取雪球和混合雪球，最多 16 个。
+     */
+    @Override
+    public boolean wantsToPickUp(ServerLevel level, ItemStack itemStack) {
+        return itemStack.is(SNOWBALLS_TAG) && getTotalSnowballCount() < MAX_SNOWBALLS;
+    }
+
+    /**
+     * 拾取雪球/混合雪球存入背包，最多 16 个。
+     */
+    @Override
+    protected void pickUpItem(ServerLevel level, ItemEntity entity) {
+        ItemStack itemStack = entity.getItem();
+        if (itemStack.isEmpty()) return;
+
+        int canTake = Math.min(itemStack.getCount(), MAX_SNOWBALLS - getTotalSnowballCount());
+        if (canTake <= 0) return;
+
+        ItemStack taken = itemStack.split(canTake);
+        ItemStack remainder = snowballInventory.addItem(taken);
+        int actuallyTaken = canTake;
+        if (!remainder.isEmpty()) {
+            // addItem 无法完全放入（不同组件的混合雪球无法堆叠），退回未放入部分
+            itemStack.grow(remainder.getCount());
+            actuallyTaken = canTake - remainder.getCount();
+        }
+
+        if (actuallyTaken > 0) {
+            this.onItemPickup(entity);
+            this.take(entity, actuallyTaken);
+        }
+        if (itemStack.isEmpty()) {
+            entity.discard();
+        }
+    }
+
+    /**
+     * 爆炸时释放所有雪球：以眼睛高度为圆心，水平均匀放射，
+     * 每个雪球略有随机角度偏移。
+     */
+    public void releaseSnowballs() {
+        if (!(this.level() instanceof ServerLevel serverLevel)) return;
+        if (snowballInventory.isEmpty()) return;
+
+        // 按每个物品逐支展开（同一槽位堆叠的物品拆为多支雪球）
+        int total = 0;
+        for (int i = 0; i < snowballInventory.getContainerSize(); i++) {
+            total += snowballInventory.getItem(i).getCount();
+        }
+        if (total == 0) return;
+
+        double eyeY = this.getEyeY();
+        double angleStep = 2.0 * Math.PI / total;
+        double baseAngle = this.random.nextDouble() * 2.0 * Math.PI;
+
+        int fired = 0;
+        for (int slot = 0; slot < snowballInventory.getContainerSize(); slot++) {
+            ItemStack stack = snowballInventory.getItem(slot);
+            int count = stack.getCount();
+            for (int j = 0; j < count; j++) {
+                // 均匀角度 + ±9° 随机偏移
+                double angle = baseAngle + angleStep * fired + (this.random.nextDouble() - 0.5) * 0.3;
+
+                Projectile projectile;
+                if (stack.is(ModItems.MIXED_SNOWBALL)) {
+                    ItemStack single = stack.copyWithCount(1);
+                    projectile = new MixedSnowballEntity(serverLevel, this, single);
+                } else {
+                    projectile = new Snowball(serverLevel, this, new ItemStack(Items.SNOWBALL));
+                }
+
+                projectile.setPos(this.getX(), eyeY, this.getZ());
+                projectile.shoot(Math.cos(angle), -0.5, Math.sin(angle), 1.8f, 3.0f);
+                serverLevel.addFreshEntity(projectile);
+                fired++;
+            }
+        }
+        snowballInventory.clearContent();
+
+        this.playSound(SoundEvents.SNOWBALL_THROW, 1.0f, (float) (0.8f / (this.random.nextDouble() * 0.4f + 0.8f)));
+    }
+
+    /**
+     * 死亡/还原时掉落背包中的雪球。
+     */
+    @Override
+    protected void dropEquipment(ServerLevel level) {
+        super.dropEquipment(level);
+        for (int i = 0; i < snowballInventory.getContainerSize(); i++) {
+            ItemStack stack = snowballInventory.getItem(i);
+            if (!stack.isEmpty()) {
+                this.spawnAtLocation(level, stack);
+                snowballInventory.setItem(i, ItemStack.EMPTY);
+            }
+        }
+    }
+
+    private int getTotalSnowballCount() {
+        int total = 0;
+        for (int i = 0; i < snowballInventory.getContainerSize(); i++) {
+            total += snowballInventory.getItem(i).getCount();
+        }
+        return total;
+    }
+
+    @Override
     public void addAdditionalSaveData(ValueOutput output) {
         super.addAdditionalSaveData(output);
         output.putBoolean("Pumpkin", hasPumpkin());
         output.putInt("SnowLayer", snowLayerHealth);
         output.putInt("MeltCooldown", meltCooldown);
         output.putBoolean("PlayerCreated", playerCreated);
+        snowballInventory.storeAsItemList(output.list("SnowballInventory", ItemStack.CODEC));
     }
 
     @Override
@@ -244,5 +379,11 @@ public class SuspiciousSnowGolemEntity extends Creeper {
         snowLayerHealth = input.getIntOr("SnowLayer", MAX_SNOW_LAYER);
         meltCooldown = input.getIntOr("MeltCooldown", MELT_COOLDOWN);
         playerCreated = input.getBooleanOr("PlayerCreated", false);
+        snowballInventory.clearContent();
+        input.list("SnowballInventory", ItemStack.CODEC).ifPresent(stacks -> {
+            for (ItemStack stack : stacks) {
+                snowballInventory.addItem(stack);
+            }
+        });
     }
 }

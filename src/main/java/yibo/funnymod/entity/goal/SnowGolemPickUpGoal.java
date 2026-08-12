@@ -1,6 +1,7 @@
 package yibo.funnymod.entity.goal;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -37,13 +38,15 @@ public class SnowGolemPickUpGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (!(mob.level() instanceof ServerLevel serverLevel)) return false;
         List<ItemEntity> items = mob.level().getEntitiesOfClass(
             ItemEntity.class,
             mob.getBoundingBox().inflate(searchRange),
             item -> {
                 if (!item.isAlive() || item.hasPickUpDelay()) return false;
                 ItemStack stack = item.getItem();
-                return !stack.isEmpty() && stack.is(SNOW_GOLEM_PICKS_UP);
+                return !stack.isEmpty() && stack.is(SNOW_GOLEM_PICKS_UP)
+                       && mob.wantsToPickUp(serverLevel, stack);
             }
         );
 
@@ -60,6 +63,8 @@ public class SnowGolemPickUpGoal extends Goal {
         return targetItem != null
                && targetItem.isAlive()
                && !targetItem.hasPickUpDelay()
+               && mob.level() instanceof ServerLevel serverLevel
+               && mob.wantsToPickUp(serverLevel, targetItem.getItem())
                && mob.distanceToSqr(targetItem) > 2.0; // 足够近时停止，交给 aiStep 拾取
     }
 

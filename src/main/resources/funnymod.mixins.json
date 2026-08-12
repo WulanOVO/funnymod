@@ -3,6 +3,7 @@
 	"package": "yibo.funnymod.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
+		"CreeperExplodeMixin",
 		"FishingHookMixin",
 		"LivingEntityMixin",
         "EntityMixin",

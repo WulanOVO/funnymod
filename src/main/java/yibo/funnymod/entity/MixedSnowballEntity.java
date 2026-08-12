@@ -201,7 +201,7 @@ public class MixedSnowballEntity extends ThrowableItemProjectile {
                             getOwner(),
                             damageSources().thrown(this, getOwner()), null,
                             getX(), getY(), getZ(),
-                            (float) gunpowderCount * 0.3f, enableFire, Level.ExplosionInteraction.BLOCK
+                            (float) gunpowderCount * 0.4f, enableFire, Level.ExplosionInteraction.BLOCK
                         );
                     }
                 }
