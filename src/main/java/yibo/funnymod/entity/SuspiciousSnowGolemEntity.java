@@ -156,7 +156,51 @@ public class SuspiciousSnowGolemEntity extends Creeper {
                     reduceSnowLayer(serverLevel, 1);
                 }
             }
+
+            // 戴南瓜时：被玩家盯就冻结，移开视线才追击
+            updateWatchedBehavior();
         }
+    }
+
+    /**
+     * 戴南瓜时鬼鬼祟祟：仅在追击玩家时被注视才停止，游荡状态不受限制。
+     * 已经开始膨胀则不可撤销。
+     */
+    private void updateWatchedBehavior() {
+        if (!hasPumpkin()) return;
+        if (getTarget() == null) return;  // 没有追击目标，随便看
+        if (getSwellDir() > 0) return;    // 已经在膨胀，不可撤销
+
+        if (isBeingWatchedByPlayer()) {
+            setTarget(null);
+            getNavigation().stop();
+        }
+    }
+
+    /**
+     * 是否有非旁观玩家正在注视自己（16 格内 + 视野中心 ±35° + 无方块遮挡）。
+     */
+    private boolean isBeingWatchedByPlayer() {
+        for (Player player : level().players()) {
+            if (player.isSpectator()) continue;
+
+            double dist = player.distanceTo(this);
+            if (dist > 16.0) continue;
+
+            Vec3 look = player.getViewVector(1.0f);
+            Vec3 toEntity = new Vec3(
+                getX() - player.getX(),
+                getEyeY() - player.getEyeY(),
+                getZ() - player.getZ()
+            ).normalize();
+            double dot = look.dot(toEntity);
+
+            // FOV ~70°, cos(35°) ≈ 0.82
+            if (dot > 0.82 && player.hasLineOfSight(this)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void reduceSnowLayer(ServerLevel level, int amount) {
