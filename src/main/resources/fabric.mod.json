@@ -22,6 +22,7 @@
 			"yibo.funnymod.client.FunnymodClient"
 		]
 	},
+	"accessWidener": "funnymod.accesswidener",
 	"mixins": [
 		"funnymod.mixins.json",
 		{

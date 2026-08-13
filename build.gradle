@@ -17,6 +17,8 @@ repositories {
 }
 
 loom {
+	accessWidenerPath = file("src/main/resources/funnymod.accesswidener")
+
 	splitEnvironmentSourceSets()
 
 	mods {

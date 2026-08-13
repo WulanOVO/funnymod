@@ -10,6 +10,7 @@ import yibo.funnymod.enchantment.ModEnchantments;
 import yibo.funnymod.entity.ModEntities;
 import yibo.funnymod.event.ModEvents;
 import yibo.funnymod.item.ModItems;
+import yibo.funnymod.network.ModNetworking;
 import yibo.funnymod.recipe.ModRecipes;
 
 public class Funnymod implements ModInitializer {
@@ -25,6 +26,7 @@ public class Funnymod implements ModInitializer {
 		ModEntities.initialize();
 		ModRecipes.initialize();
 		ModEvents.initialize();
+		ModNetworking.initialize();
 
 		LOGGER.info("FunnyMod 初始化完成！");
 	}

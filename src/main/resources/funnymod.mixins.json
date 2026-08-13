@@ -7,7 +7,9 @@
 		"FishingHookMixin",
 		"LivingEntityMixin",
         "EntityMixin",
-        "SnowGolemMixin"
+        "SnowGolemMixin",
+        "SkeletonHorseMixin",
+        "HorseInventoryMenuMixin"
     ],
 	"injectors": {
 		"defaultRequire": 1

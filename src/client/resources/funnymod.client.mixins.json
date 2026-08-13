@@ -4,7 +4,9 @@
   "compatibilityLevel": "JAVA_25",
   "client": [
     "CommandHistoryMixin",
-    "ChatComponentMixin"
+    "ChatComponentMixin",
+    "LocalPlayerMixin",
+    "AbstractMountInventoryScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
