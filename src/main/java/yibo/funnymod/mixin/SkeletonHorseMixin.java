@@ -82,6 +82,11 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     private static final EntityDataAccessor<Integer> DATA_FIREWORK_FLIGHT_DURATION =
             SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
 
+    /** 同步烟花槽中烟花火箭的「数量」到客户端，客户端据此渲染尾部骨架空腔中的火箭 */
+    @Unique
+    private static final EntityDataAccessor<Integer> DATA_FIREWORK_COUNT =
+            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
+
     /** 烟花火箭槽位（单格）。写入变化时同步 hasFirework 标志与飞行时长到客户端 */
     @Unique
     private final SimpleContainer fireworkContainer = new SimpleContainer(1) {
@@ -113,6 +118,7 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         super.defineSynchedData(entityData);
         entityData.define(DATA_HAS_FIREWORK, false);
         entityData.define(DATA_FIREWORK_FLIGHT_DURATION, 0);
+        entityData.define(DATA_FIREWORK_COUNT, 0);
     }
 
     /** 将烟花槽状态（是否为空 + 飞行时长）同步到实体数据 */
@@ -120,6 +126,7 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     private void syncFireworkFlag() {
         ItemStack stack = this.fireworkContainer.getItem(0);
         this.entityData.set(DATA_HAS_FIREWORK, !stack.isEmpty());
+        this.entityData.set(DATA_FIREWORK_COUNT, stack.isEmpty() ? 0 : stack.getCount());
 
         int flightDuration = 0;
         if (stack.is(Items.FIREWORK_ROCKET)) {
@@ -146,6 +153,11 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     @Override
     public boolean funnymod$hasFirework() {
         return this.entityData.get(DATA_HAS_FIREWORK);
+    }
+
+    @Override
+    public int funnymod$getFireworkCount() {
+        return this.entityData.get(DATA_FIREWORK_COUNT);
     }
 
     @Override

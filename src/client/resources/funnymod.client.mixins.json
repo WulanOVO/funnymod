@@ -6,7 +6,10 @@
     "CommandHistoryMixin",
     "ChatComponentMixin",
     "LocalPlayerMixin",
-    "AbstractMountInventoryScreenMixin"
+    "AbstractMountInventoryScreenMixin",
+    "EquineRenderStateMixin",
+    "AbstractHorseRendererMixin",
+    "UndeadHorseRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

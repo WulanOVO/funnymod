@@ -19,6 +19,12 @@ public interface FireworkDashHorse {
     boolean funnymod$hasFirework();
 
     /**
+     * 烟花槽位中烟花火箭的数量（通过实体数据同步，客户端可读）。
+     * 客户端据此渲染骷髅马尾部骨架空腔中的烟花火箭（最多渲染 4 个）。
+     */
+    int funnymod$getFireworkCount();
+
+    /**
      * 立即摆正马身、退出站立/跳跃蓄力状态。
      * 触发突进时调用，避免跳跃状态干扰突进。
      */
