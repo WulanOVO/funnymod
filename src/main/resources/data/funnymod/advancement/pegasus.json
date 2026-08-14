@@ -1,0 +1,21 @@
+{
+  "parent": "minecraft:adventure/root",
+  "display": {
+    "icon": "minecraft:firework_rocket",
+    "title": {
+      "translate": "advancements.funnymod.pegasus.title"
+    },
+    "description": {
+      "translate": "advancements.funnymod.pegasus.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "airborne_10s": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

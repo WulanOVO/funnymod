@@ -4,5 +4,7 @@
   "effect.funnymod.sticky": "胶着",
   "effect.funnymod.sticky_feet": "粘脚",
   "item.funnymod.mixed_snowball": "混合雪球",
-  "entity.funnymod.suspicious_snow_golem": "可疑的雪傀儡"
+  "entity.funnymod.suspicious_snow_golem": "可疑的雪傀儡",
+  "advancements.funnymod.pegasus.title": "天马行空",
+  "advancements.funnymod.pegasus.description": "骑乘骷髅马，用烟花火箭让它保持腾空 10 秒"
 }

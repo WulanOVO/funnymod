@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -22,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.Fireworks;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
@@ -32,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.entity.FireworkDashHorse;
+import yibo.funnymod.event.ModEvents;
 
 /**
  * 给骷髅马添加一个只能放烟花火箭的槽位（最多堆叠 64 个），
@@ -200,6 +203,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             // 服务端记录突进状态，用于冲撞判定
             this.rammedEntities.clear();
             this.dashEndTick = this.tickCount + DASH_TICKS;
+
+            // 通知进度检测：骑乘者已释放烟花火箭（用于「天马行空」进度的腾空计时）
+            ModEvents.onDashStarted(this);
         } else {
             // 客户端：设置初始冲量并启动持续突进（本地权威模拟）
             Vec3 forward = this.getLookAngle();
@@ -232,6 +238,27 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             // 服务端：冲撞判定（伤害与击退需服务端权威）
             this.applyRammingDamage((ServerLevel) this.level());
         }
+    }
+
+    /**
+     * 当前是否处于突进飞行状态。
+     * 客户端用本地 dashTicks 判定，服务端用 dashEndTick 时间戳判定。
+     */
+    @Unique
+    private boolean funnymod$isDashing() {
+        return this.level().isClientSide() ? this.dashTicks > 0 : this.tickCount < this.dashEndTick;
+    }
+
+    /**
+     * 突进飞行期间不累积摔落距离，避免持续用烟花火箭保持腾空时，
+     * fallDistance 只增不减（上升不减少）导致落地莫名摔死。
+     */
+    @Override
+    protected void checkFallDamage(double ya, boolean onGround, BlockState onState, BlockPos pos) {
+        if (this.funnymod$isDashing()) {
+            this.resetFallDistance();
+        }
+        super.checkFallDamage(ya, onGround, onState, pos);
     }
 
     /** 服务端：突进期间对撞到的生物造成伤害与击退 */

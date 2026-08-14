@@ -1,10 +1,17 @@
 package yibo.funnymod.event;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
+import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.server.ServerAdvancementManager;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
@@ -13,6 +20,8 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.animal.equine.SkeletonHorse;
 import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
@@ -30,6 +39,12 @@ public class ModEvents {
     private static final TagKey<Biome> SNOW_GOLEM_SPAWNS =
         TagKey.create(Registries.BIOME, Funnymod.id("snow_golem_spawns"));
 
+    /** 「天马行空」进度：需保持腾空的 tick 数（10 秒 = 200 tick） */
+    private static final int AIRBORNE_TICKS = 200;
+
+    /** 记录骑乘者第一次释放烟花火箭的游戏时间（key=玩家 UUID，value=起始 gameTime） */
+    private static final Map<UUID, Long> AIRBORNE_START = new HashMap<>();
+
     private static final int SPAWN_INTERVAL = 600;       // 每 30 秒尝试一次
     private static final int SPAWN_ATTEMPTS = 4;         // 每次尝试 4 个位置
     private static final int SPAWN_RANGE = 48;           // 生成范围：玩家周围 48 格
@@ -42,6 +57,48 @@ public class ModEvents {
 
         // 手动 tick 生成：绕过 Fabric API 的 MISC 限制，同时生成原版雪傀儡和可疑雪傀儡
         ServerTickEvents.END_LEVEL_TICK.register(ModEvents::onLevelTick);
+    }
+
+    /**
+     * 骷髅马释放烟花火箭时由 {@code SkeletonHorseMixin} 调用（服务端）。
+     * 记录骑乘者第一次释放烟花火箭的游戏时间，用于「天马行空」进度的腾空计时。
+     */
+    public static void onDashStarted(AbstractHorse horse) {
+        if (horse.getFirstPassenger() instanceof ServerPlayer player) {
+            AIRBORNE_START.putIfAbsent(player.getUUID(), horse.level().getGameTime());
+        }
+    }
+
+    /** 检测「天马行空」进度：骑乘骷髅马，第一次释放烟花火箭后 10 秒内均未触地 */
+    private static void checkAirborneAdvancement(ServerLevel level) {
+        if (AIRBORNE_START.isEmpty()) return;
+        long now = level.getGameTime();
+        for (ServerPlayer player : level.players()) {
+            Long startTick = AIRBORNE_START.get(player.getUUID());
+            if (startTick == null) continue;
+
+            Entity vehicle = player.getVehicle();
+            if (!(vehicle instanceof SkeletonHorse)) {
+                AIRBORNE_START.remove(player.getUUID()); // 下马或换坐骑，重置
+                continue;
+            }
+            if (vehicle.onGround()) {
+                AIRBORNE_START.remove(player.getUUID()); // 触地，重置
+                continue;
+            }
+            if (now - startTick >= AIRBORNE_TICKS) {
+                awardPegasus(level, player);
+                AIRBORNE_START.remove(player.getUUID());
+            }
+        }
+    }
+
+    /** 授予「天马行空」进度 */
+    private static void awardPegasus(ServerLevel level, ServerPlayer player) {
+        AdvancementHolder holder = level.getServer().getAdvancements().get(Funnymod.id("pegasus"));
+        if (holder != null) {
+            player.getAdvancements().award(holder, "airborne_10s");
+        }
     }
 
     private static InteractionResult onUseEntity(
@@ -88,6 +145,8 @@ public class ModEvents {
     }
 
     private static void onLevelTick(ServerLevel level) {
+        checkAirborneAdvancement(level);
+
         if (level.getGameTime() % SPAWN_INTERVAL != 0) return;
         if (level.players().isEmpty()) return;
 
