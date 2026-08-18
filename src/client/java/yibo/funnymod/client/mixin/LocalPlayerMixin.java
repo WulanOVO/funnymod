@@ -12,15 +12,22 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.entity.FireworkDashHorse;
+import yibo.funnymod.entity.RiderJumpInput;
 import yibo.funnymod.network.SkeletonHorseDashPayload;
 
 /**
  * 客户端：骑乘骷髅马时，按住疾跑键的同时按下空格键，拦截原版跳跃逻辑，改为触发突进。
  */
 @Mixin(LocalPlayer.class)
-public abstract class LocalPlayerMixin {
+public abstract class LocalPlayerMixin implements RiderJumpInput {
     @Shadow
     public ClientInput input;
+
+    /** 客户端：直接读取本地按键状态 */
+    @Override
+    public boolean funnymod$isJumpHeld() {
+        return this.input.keyPresses.jump();
+    }
 
     /** 上一 tick 跳跃键是否处于按下状态，用于检测按下沿 */
     @Unique

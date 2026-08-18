@@ -3,13 +3,12 @@
   "package": "yibo.funnymod.client.mixin",
   "compatibilityLevel": "JAVA_25",
   "client": [
-    "CommandHistoryMixin",
-    "ChatComponentMixin",
     "LocalPlayerMixin",
     "AbstractMountInventoryScreenMixin",
     "EquineRenderStateMixin",
     "AbstractHorseRendererMixin",
-    "UndeadHorseRendererMixin"
+    "UndeadHorseRendererMixin",
+    "LivingEntityElytraSoundMixin"
   ],
   "injectors": {
     "defaultRequire": 1

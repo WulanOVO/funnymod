@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.animal.equine.SkeletonHorse;
@@ -34,7 +35,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.entity.FireworkDashHorse;
-import yibo.funnymod.event.ModEvents;
 
 /**
  * 给骷髅马添加一个只能放烟花火箭的槽位（最多堆叠 64 个），
@@ -172,7 +172,7 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
 
     /**
      * 触发突进。
-     * 服务端：消耗烟花火箭 + 生成伴飞烟花实体 + 记录突进状态用于冲撞判定（坐骑移动由客户端权威模拟）。
+     * 服务端：消耗烟花火箭 + 记录突进状态用于冲撞判定（坐骑移动由客户端权威模拟）。
      * 客户端：设置初始冲量并启动持续加速度，用于本地预测。
      * 突进时长由烟花火箭的飞行时长决定。
      */
@@ -182,30 +182,29 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         this.funnymod$resetJumpState();
 
         if (this.level() instanceof ServerLevel serverLevel) {
-            // 服务端：消耗烟花火箭并生成伴飞烟花实体
+            // 服务端：消耗烟花火箭
             ItemStack stack = this.fireworkContainer.getItem(0);
             if (stack.isEmpty() || !stack.is(Items.FIREWORK_ROCKET)) {
                 return; // 没有烟花火箭，不突进
             }
-            ItemStack consumed = stack.copyWithCount(1);
+            // 先复制一份用于生成伴飞烟花火箭（之后再消耗）
+            ItemStack fireworkCopy = stack.copy();
             stack.shrink(1);
             if (stack.isEmpty()) {
                 this.fireworkContainer.setItem(0, ItemStack.EMPTY);
             }
             this.fireworkContainer.setChanged();
 
-            // 参考鞘翅伴飞：不可见烟花实体，跟随骷髅马同步移动，寿命结束爆炸
-            FireworkRocketEntity rocket = new FireworkRocketEntity(serverLevel, consumed, this);
-            serverLevel.addFreshEntity(rocket);
-
             this.playSound(SoundEvents.FIREWORK_ROCKET_LAUNCH, 1.0F, 1.0F);
+
+            // 生成附着在马身上的烟花火箭实体，提供粒子、音效、爆炸等视觉效果。
+            // 加速由 FireworkRocketEntityMixin 对非玩家实体跳过，不影响飞行状态。
+            FireworkRocketEntity rocket = new FireworkRocketEntity(serverLevel, fireworkCopy, this);
+            serverLevel.addFreshEntity(rocket);
 
             // 服务端记录突进状态，用于冲撞判定
             this.rammedEntities.clear();
             this.dashEndTick = this.tickCount + DASH_TICKS;
-
-            // 通知进度检测：骑乘者已释放烟花火箭（用于「天马行空」进度的腾空计时）
-            ModEvents.onDashStarted(this);
         } else {
             // 客户端：设置初始冲量并启动持续突进（本地权威模拟）
             Vec3 forward = this.getLookAngle();
@@ -220,23 +219,63 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     }
 
     /**
+     * 鞍槽是否装备了鞍鞘（含 GLIDER 组件的鞍槽物品）。
+     */
+    @Unique
+    private boolean funnymod$hasSaddleElytra() {
+        ItemStack saddleSlot = this.getItemBySlot(EquipmentSlot.SADDLE);
+        return !saddleSlot.isEmpty() && saddleSlot.has(DataComponents.GLIDER);
+    }
+
+    /**
      * 覆盖 tickRidden。
-     * 客户端：突进期间持续施加水平加速度，模拟鞘翅烟花火箭的持续加速效果。
+     * 客户端：突进期间持续加速。
+     *   - 装备鞍鞘：复刻 {@link FireworkRocketEntity#tick()} 的加速公式
+     *     {@code new_delta = 0.5 * old + 0.85 * lookAngle}，
+     *     速度平滑收敛到 {@code 1.5 * lookAngle}，与玩家鞘翅+烟花火箭的飞行手感一致。
+     *     同时突进期间自动保持滑翔（setSharedFlag(7,true)），确保走 travelFallFlying。
+     *   - 未装备鞍鞘：走原始的恒定加速度突进。
      * 服务端：突进期间检测冲撞，对撞到的生物造成伤害与击退。
      */
     @Override
     protected void tickRidden(Player controller, Vec3 riddenInput) {
         super.tickRidden(controller, riddenInput);
         if (this.level().isClientSide()) {
-            // 客户端：本地权威模拟持续加速
             if (this.dashTicks > 0) {
-                Vec3 forward = this.getLookAngle();
-                this.addDeltaMovement(new Vec3(forward.x * DASH_ACCEL, 0.0, forward.z * DASH_ACCEL));
+                if (this.funnymod$hasSaddleElytra()) {
+                    // 突进期间若装备鞍鞘且已离地，自动保持滑翔状态，
+                    // 使 travel() 走 travelFallFlying 而非 travelInAir
+                    if (!this.onGround() && !this.isFallFlying()) {
+                        this.setSharedFlag(7, true);
+                    }
+                    // 复刻 FireworkRocketEntity.tick() 对附着实体的加速：
+                    // movement += look * 0.1 + (look * 1.5 - movement) * 0.5
+                    // 化简 = 0.5 * old + 0.85 * look（目标速度 1.5 * lookAngle 的指数平滑收敛）
+                    Vec3 look = this.getLookAngle();
+                    Vec3 movement = this.getDeltaMovement();
+                    this.setDeltaMovement(movement.add(
+                            look.x * 0.1 + (look.x * 1.5 - movement.x) * 0.5,
+                            look.y * 0.1 + (look.y * 1.5 - movement.y) * 0.5,
+                            look.z * 0.1 + (look.z * 1.5 - movement.z) * 0.5));
+                } else {
+                    Vec3 forward = this.getLookAngle();
+                    this.addDeltaMovement(new Vec3(forward.x * DASH_ACCEL, 0.0, forward.z * DASH_ACCEL));
+                }
                 this.dashTicks--;
             }
-        } else if (this.tickCount < this.dashEndTick) {
+        } else {
+            // 服务端：突进期间若装备鞍鞘且离地，也保持滑翔状态（与客户端同步），
+            // 使 isFallFlying() 在服务端为 true，用于进度检测等服务端逻辑
+            if (this.tickCount < this.dashEndTick
+                    && this.funnymod$hasSaddleElytra()
+                    && !this.onGround()
+                    && !this.isFallFlying()) {
+                this.setSharedFlag(7, true);
+            }
             // 服务端：冲撞判定（伤害与击退需服务端权威）
-            this.applyRammingDamage((ServerLevel) this.level());
+            if (this.tickCount < this.dashEndTick) {
+                this.applyRammingDamage((ServerLevel) this.level());
+            }
         }
     }
 

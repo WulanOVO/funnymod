@@ -4,7 +4,8 @@
   "effect.funnymod.sticky": "Sticky",
   "effect.funnymod.sticky_feet": "Sticky Feet",
   "item.funnymod.mixed_snowball": "Mixed Snowball",
+  "item.funnymod.saddle_elytra": "Saddle Elytra",
   "entity.funnymod.suspicious_snow_golem": "Suspicious Snow Golem",
   "advancements.funnymod.pegasus.title": "Pegasus",
-  "advancements.funnymod.pegasus.description": "Ride a skeleton horse and keep it airborne with firework rockets for 10 seconds"
+  "advancements.funnymod.pegasus.description": "Glide through the air on a saddle-elytra-equipped skeleton horse"
 }

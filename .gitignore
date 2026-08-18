@@ -1,5 +1,6 @@
 sources/
 .workbuddy/
+docs/
 
 *.dll
 

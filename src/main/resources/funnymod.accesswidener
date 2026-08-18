@@ -3,3 +3,6 @@ classTweaker v1 official
 # 使坐骑库存界面父类的坐标字段可访问，用于在骷髅马库存界面渲染烟花槽背景
 accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen leftPos I
 accessible field net/minecraft/client/gui/screens/inventory/AbstractContainerScreen topPos I
+
+# 开放共享标志位写入（声明在 Entity，protected），用于坐骑滑翔时设置 fallFlying 标志（位 7）
+accessible method net/minecraft/world/entity/Entity setSharedFlag (IZ)V

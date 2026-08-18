@@ -9,7 +9,10 @@
         "EntityMixin",
         "SnowGolemMixin",
         "SkeletonHorseMixin",
-        "HorseInventoryMenuMixin"
+        "HorseInventoryMenuMixin",
+        "ServerPlayerMixin",
+        "AbstractHorseMixin",
+        "FireworkRocketEntityMixin"
     ],
 	"injectors": {
 		"defaultRequire": 1

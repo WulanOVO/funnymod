@@ -14,7 +14,7 @@
     "hidden": false
   },
   "criteria": {
-    "airborne_10s": {
+    "glide": {
       "trigger": "minecraft:impossible"
     }
   }

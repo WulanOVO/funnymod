@@ -1,30 +1,23 @@
 package yibo.funnymod.event;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.server.ServerAdvancementManager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.animal.equine.AbstractHorse;
+import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.animal.equine.SkeletonHorse;
 import net.minecraft.world.entity.animal.golem.SnowGolem;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
@@ -35,15 +28,16 @@ import yibo.funnymod.Funnymod;
 import yibo.funnymod.entity.ModEntities;
 import yibo.funnymod.entity.SuspiciousSnowGolemEntity;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
 public class ModEvents {
     private static final TagKey<Biome> SNOW_GOLEM_SPAWNS =
         TagKey.create(Registries.BIOME, Funnymod.id("snow_golem_spawns"));
 
-    /** 「天马行空」进度：需保持腾空的 tick 数（10 秒 = 200 tick） */
-    private static final int AIRBORNE_TICKS = 200;
-
-    /** 记录骑乘者第一次释放烟花火箭的游戏时间（key=玩家 UUID，value=起始 gameTime） */
-    private static final Map<UUID, Long> AIRBORNE_START = new HashMap<>();
+    /** 记录已授予「天马行空」进度的玩家，避免每 tick 重复调用 award */
+    private static final Map<UUID, Boolean> PEGASUS_AWARDED = new HashMap<>();
 
     private static final int SPAWN_INTERVAL = 600;       // 每 30 秒尝试一次
     private static final int SPAWN_ATTEMPTS = 4;         // 每次尝试 4 个位置
@@ -60,36 +54,18 @@ public class ModEvents {
     }
 
     /**
-     * 骷髅马释放烟花火箭时由 {@code SkeletonHorseMixin} 调用（服务端）。
-     * 记录骑乘者第一次释放烟花火箭的游戏时间，用于「天马行空」进度的腾空计时。
+     * 检测「天马行空」进度：玩家骑乘装备鞍鞘的骷髅马且正在滑翔时立即触发。
      */
-    public static void onDashStarted(AbstractHorse horse) {
-        if (horse.getFirstPassenger() instanceof ServerPlayer player) {
-            AIRBORNE_START.putIfAbsent(player.getUUID(), horse.level().getGameTime());
-        }
-    }
-
-    /** 检测「天马行空」进度：骑乘骷髅马，第一次释放烟花火箭后 10 秒内均未触地 */
     private static void checkAirborneAdvancement(ServerLevel level) {
-        if (AIRBORNE_START.isEmpty()) return;
-        long now = level.getGameTime();
         for (ServerPlayer player : level.players()) {
-            Long startTick = AIRBORNE_START.get(player.getUUID());
-            if (startTick == null) continue;
-
+            if (PEGASUS_AWARDED.containsKey(player.getUUID())) continue;
             Entity vehicle = player.getVehicle();
-            if (!(vehicle instanceof SkeletonHorse)) {
-                AIRBORNE_START.remove(player.getUUID()); // 下马或换坐骑，重置
-                continue;
-            }
-            if (vehicle.onGround()) {
-                AIRBORNE_START.remove(player.getUUID()); // 触地，重置
-                continue;
-            }
-            if (now - startTick >= AIRBORNE_TICKS) {
-                awardPegasus(level, player);
-                AIRBORNE_START.remove(player.getUUID());
-            }
+            if (!(vehicle instanceof SkeletonHorse horse)) continue;
+            ItemStack saddleSlot = horse.getItemBySlot(EquipmentSlot.SADDLE);
+            if (saddleSlot.isEmpty() || !saddleSlot.has(DataComponents.GLIDER)) continue;
+            if (!horse.isFallFlying()) continue;
+            awardPegasus(level, player);
+            PEGASUS_AWARDED.put(player.getUUID(), Boolean.TRUE);
         }
     }
 
@@ -97,7 +73,7 @@ public class ModEvents {
     private static void awardPegasus(ServerLevel level, ServerPlayer player) {
         AdvancementHolder holder = level.getServer().getAdvancements().get(Funnymod.id("pegasus"));
         if (holder != null) {
-            player.getAdvancements().award(holder, "airborne_10s");
+            player.getAdvancements().award(holder, "glide");
         }
     }
 
