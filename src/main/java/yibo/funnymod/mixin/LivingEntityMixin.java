@@ -1,9 +1,14 @@
 package yibo.funnymod.mixin;
 
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -55,5 +60,28 @@ public abstract class LivingEntityMixin {
             // setSharedFlag 声明在 Entity（protected），已通过 access widener 开放，直接调用
             self.setSharedFlag(7, true);
         }
+    }
+
+    /**
+     * 鞍鞘耐久到 maxDamage-1（原版 nextDamageWillBreak 状态，失去滑翔资格）时，
+     * 把鞍鞘拆成破损鞘翅掉落物 + 普通马鞍，保留骑乘能力、失去滑翔能力。
+     */
+    @Inject(method = "updateFallFlying", at = @At("HEAD"))
+    private void funnymod$breakSaddleElytraOnLowDurability(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide()) {
+            return;
+        }
+        ItemStack saddleSlot = self.getItemBySlot(EquipmentSlot.SADDLE);
+        if (saddleSlot.isEmpty() || !saddleSlot.has(DataComponents.GLIDER) || !saddleSlot.nextDamageWillBreak()) {
+            return;
+        }
+        ServerLevel serverLevel = (ServerLevel) self.level();
+        ItemStack brokenElytra = new ItemStack(Items.ELYTRA);
+        brokenElytra.setDamageValue(brokenElytra.getMaxDamage());
+        self.spawnAtLocation(serverLevel, brokenElytra);
+        // 鞍槽破碎视觉事件（事件码 68 = SADDLE）
+        serverLevel.broadcastEntityEvent(self, (byte) 68);
+        self.setItemSlot(EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
     }
 }

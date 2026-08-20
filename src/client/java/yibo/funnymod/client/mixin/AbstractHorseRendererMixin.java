@@ -12,23 +12,30 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.client.render.FireworkDashHorseRenderState;
+import yibo.funnymod.client.render.SaddleElytraRenderState;
 import yibo.funnymod.entity.FireworkDashHorse;
 
 /**
- * 在提取坐骑渲染状态时，把骷髅马烟花槽中的火箭数量与火箭 item 渲染状态填入渲染状态。
- * 火箭渲染用 item display 实体的方式（ItemModelResolver + FIXED 展示上下文）。
+ * 在提取坐骑渲染状态时填充本模组附加数据：
+ * 烟花火箭槽的 item 渲染状态与数量，以及鞘翅旋转值（复刻玩家鞘翅机制，
+ * 从 {@code LivingEntity#elytraAnimationState} 提取）。
  */
 @Mixin(AbstractHorseRenderer.class)
 public abstract class AbstractHorseRendererMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
-    private void funnymod$extractFirework(
+    private void funnymod$extractExtraRenderState(
         AbstractHorse entity, EquineRenderState state, float partialTicks, CallbackInfo ci) {
+        SaddleElytraRenderState elytraAccess = (SaddleElytraRenderState) (Object) state;
+        // 复刻玩家鞘翅：从实体 elytraAnimationState 取插值后的旋转角，供 HorseElytraModel 读取
+        elytraAccess.funnymod$setElytraRotX(entity.elytraAnimationState.getRotX(partialTicks));
+        elytraAccess.funnymod$setElytraRotY(entity.elytraAnimationState.getRotY(partialTicks));
+        elytraAccess.funnymod$setElytraRotZ(entity.elytraAnimationState.getRotZ(partialTicks));
+
         FireworkDashHorseRenderState access = (FireworkDashHorseRenderState) (Object) state;
         if (entity instanceof FireworkDashHorse horse) {
             int count = horse.funnymod$getFireworkCount();
             access.funnymod$setFireworkCount(count);
             if (count > 0) {
-                // 烟花火箭外观固定，用一个新的 ItemStack 渲染即可（数量由 fireworkCount 决定）
                 Minecraft.getInstance().getItemModelResolver().updateForNonLiving(
                     access.funnymod$getFireworkItem(),
                     new ItemStack(Items.FIREWORK_ROCKET),

@@ -11,5 +11,10 @@ public class ModRecipes {
                 Funnymod.id("snowball_mix"),
                 SnowballMixRecipe.SERIALIZER
         );
+        Registry.register(
+                BuiltInRegistries.RECIPE_SERIALIZER,
+                Funnymod.id("saddle_elytra"),
+                SaddleElytraRecipe.SERIALIZER
+        );
     }
 }

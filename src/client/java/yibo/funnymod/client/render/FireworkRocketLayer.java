@@ -21,11 +21,11 @@ public class FireworkRocketLayer extends RenderLayer<EquineRenderState, Abstract
     /** 火箭沿身体宽度方向（X）并排的间距*/
     private static final float ROCKET_X_SPACING = 0.1f;
 
-    /** 火箭中心在身体局部空间中的 Z 坐标（前负后正）*/
-    private static final float ROCKET_Z = 0.1f;
-
     /** 尾部空腔在身体局部空间中的 Y 坐标（上负下正） */
     private static final float ROCKET_Y = -0.2f;
+
+    /** 火箭中心在身体局部空间中的 Z 坐标（前负后正）*/
+    private static final float ROCKET_Z = 0.1f;
 
     public FireworkRocketLayer(RenderLayerParent<EquineRenderState, AbstractEquineModel<EquineRenderState>> renderer) {
         super(renderer);
