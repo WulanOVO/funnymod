@@ -13,11 +13,12 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import yibo.funnymod.entity.CrossbowSlot;
 import yibo.funnymod.entity.FireworkDashHorse;
 import yibo.funnymod.entity.FireworkSlot;
 
 /**
- * 在骷髅马库存菜单中，于马鞍槽位下方（马甲槽位置）添加一个烟花火箭槽位。
+ * 在骷髅马库存菜单中，于马鞍槽位下方依次添加烟花火箭槽位与弩槽位。
  * 仅当坐骑实现 {@link FireworkDashHorse}（即骷髅马）时生效。
  */
 @Mixin(HorseInventoryMenu.class)
@@ -26,26 +27,32 @@ public abstract class HorseInventoryMenuMixin extends AbstractMountInventoryMenu
     @Unique
     private int fireworkSlotIndex = -1;
 
+    /** 弩槽位的索引，非骷髅马时为 -1 */
+    @Unique
+    private int crossbowSlotIndex = -1;
+
     protected HorseInventoryMenuMixin(int containerId, Inventory playerInventory, Container mountInventory, LivingEntity mount) {
         super(containerId, playerInventory, mountInventory, mount);
     }
 
     /**
-     * 在添加玩家背包槽位之前插入烟花槽位，
-     * 位置 (8, 36) 位于马鞍槽 (8, 18) 的正下方。
+     * 在添加玩家背包槽位之前插入烟花槽位 (8, 36) 与弩槽位 (8, 54)。
      */
     @Inject(method = "<init>", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/inventory/HorseInventoryMenu;addStandardInventorySlots(Lnet/minecraft/world/Container;II)V"))
-    private void addFireworkSlot(CallbackInfo ci) {
+    private void addExtraSlots(CallbackInfo ci) {
         if (this.mount instanceof FireworkDashHorse horse) {
-            FireworkSlot slot = new FireworkSlot(horse.funnymod$getFireworkContainer(), 0, 8, 36);
-            this.addSlot(slot);
-            this.fireworkSlotIndex = slot.index;
+            FireworkSlot fireworkSlot = new FireworkSlot(horse.funnymod$getFireworkContainer(), 0, 8, 36);
+            this.addSlot(fireworkSlot);
+            this.fireworkSlotIndex = fireworkSlot.index;
+            CrossbowSlot crossbowSlot = new CrossbowSlot(horse.funnymod$getCrossbowContainer(), 0, 8, 54);
+            this.addSlot(crossbowSlot);
+            this.crossbowSlotIndex = crossbowSlot.index;
         }
     }
 
     /**
-     * 重写快速移动逻辑，使烟花槽位支持 shift + 点击。
+     * 重写快速移动逻辑，使烟花槽位与弩槽位支持 shift + 点击。
      */
     @Override
     public ItemStack quickMoveStack(Player player, int slotIndex) {
@@ -55,8 +62,10 @@ public abstract class HorseInventoryMenuMixin extends AbstractMountInventoryMenu
             ItemStack stack = slot.getItem();
             clicked = stack.copy();
             boolean hasFireworkSlot = this.fireworkSlotIndex >= 0;
-            // 坐骑槽位数量 = 鞍槽 + 马甲槽 + (可选)烟花槽 + 箱子栏
-            int mountSlotCount = 2 + this.mountContainer.getContainerSize() + (hasFireworkSlot ? 1 : 0);
+            boolean hasCrossbowSlot = this.crossbowSlotIndex >= 0;
+            int extraSlots = (hasFireworkSlot ? 1 : 0) + (hasCrossbowSlot ? 1 : 0);
+            // 坐骑槽位数量 = 鞍槽 + 马甲槽 + 额外槽位 + 箱子栏
+            int mountSlotCount = 2 + this.mountContainer.getContainerSize() + extraSlots;
             int playerContainerStart = mountSlotCount;
 
             if (slotIndex < mountSlotCount) {
@@ -72,8 +81,14 @@ public abstract class HorseInventoryMenuMixin extends AbstractMountInventoryMenu
                 if (!this.moveItemStackTo(stack, 0, 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (hasFireworkSlot && this.getSlot(this.fireworkSlotIndex).mayPlace(stack) && !this.getSlot(this.fireworkSlotIndex).hasItem()) {
+            } else if (hasFireworkSlot && this.getSlot(this.fireworkSlotIndex).mayPlace(stack)
+                    && !this.getSlot(this.fireworkSlotIndex).hasItem()) {
                 if (!this.moveItemStackTo(stack, this.fireworkSlotIndex, this.fireworkSlotIndex + 1, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (hasCrossbowSlot && this.getSlot(this.crossbowSlotIndex).mayPlace(stack)
+                    && !this.getSlot(this.crossbowSlotIndex).hasItem()) {
+                if (!this.moveItemStackTo(stack, this.crossbowSlotIndex, this.crossbowSlotIndex + 1, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (this.mountContainer.getContainerSize() == 0 || !this.moveItemStackTo(stack, 2, 2 + this.mountContainer.getContainerSize(), false)) {

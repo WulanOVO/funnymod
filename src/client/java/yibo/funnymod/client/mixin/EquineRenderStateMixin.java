@@ -15,7 +15,7 @@ import yibo.funnymod.client.render.SaddleElytraRenderState;
  */
 @Mixin(EquineRenderState.class)
 public abstract class EquineRenderStateMixin
-        implements FireworkDashHorseRenderState, SaddleElytraRenderState {
+    implements FireworkDashHorseRenderState, SaddleElytraRenderState {
 
     @Unique
     private final ItemStackRenderState funnymod$fireworkItem = new ItemStackRenderState();
@@ -23,7 +23,15 @@ public abstract class EquineRenderStateMixin
     @Unique
     private int funnymod$fireworkCount = 0;
 
-    /** 鞘翅当前旋转值，由 {@code AbstractHorseRendererMixin} 从 elytraAnimationState 提取并填充 */
+    @Unique
+    private final ItemStackRenderState funnymod$crossbowItem = new ItemStackRenderState();
+
+    @Unique
+    private boolean funnymod$hasCrossbow = false;
+
+    /**
+     * 鞘翅当前旋转值，由 {@code AbstractHorseRendererMixin} 从 elytraAnimationState 提取并填充
+     */
     @Unique
     private float funnymod$elytraRotX = 0.2617994f;
 
@@ -46,6 +54,21 @@ public abstract class EquineRenderStateMixin
     @Override
     public void funnymod$setFireworkCount(int count) {
         this.funnymod$fireworkCount = count;
+    }
+
+    @Override
+    public ItemStackRenderState funnymod$getCrossbowItem() {
+        return this.funnymod$crossbowItem;
+    }
+
+    @Override
+    public boolean funnymod$hasCrossbow() {
+        return this.funnymod$hasCrossbow;
+    }
+
+    @Override
+    public void funnymod$setHasCrossbow(boolean hasCrossbow) {
+        this.funnymod$hasCrossbow = hasCrossbow;
     }
 
     @Override

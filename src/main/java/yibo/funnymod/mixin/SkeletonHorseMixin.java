@@ -90,6 +90,16 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     private static final EntityDataAccessor<Integer> DATA_FIREWORK_COUNT =
             SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
 
+    /** 同步「弩槽是否为空」到客户端的实体数据 key */
+    @Unique
+    private static final EntityDataAccessor<Boolean> DATA_HAS_CROSSBOW =
+            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.BOOLEAN);
+
+    /** 同步弩槽中的实际 ItemStack 到客户端，客户端据此渲染装填状态、附魔光泽、耐久等 */
+    @Unique
+    private static final EntityDataAccessor<ItemStack> DATA_CROSSBOW_STACK =
+            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.ITEM_STACK);
+
     /** 烟花火箭槽位（单格）。写入变化时同步 hasFirework 标志与飞行时长到客户端 */
     @Unique
     private final SimpleContainer fireworkContainer = new SimpleContainer(1) {
@@ -97,6 +107,16 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         public void setChanged() {
             super.setChanged();
             SkeletonHorseMixin.this.syncFireworkFlag();
+        }
+    };
+
+    /** 弩槽位（单格，不可堆叠）。写入变化时同步 hasCrossbow 标志到客户端 */
+    @Unique
+    private final SimpleContainer crossbowContainer = new SimpleContainer(1) {
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            SkeletonHorseMixin.this.syncCrossbowFlag();
         }
     };
 
@@ -122,6 +142,8 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         entityData.define(DATA_HAS_FIREWORK, false);
         entityData.define(DATA_FIREWORK_FLIGHT_DURATION, 0);
         entityData.define(DATA_FIREWORK_COUNT, 0);
+        entityData.define(DATA_HAS_CROSSBOW, false);
+        entityData.define(DATA_CROSSBOW_STACK, ItemStack.EMPTY);
     }
 
     /** 将烟花槽状态（是否为空 + 飞行时长）同步到实体数据 */
@@ -139,6 +161,14 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             }
         }
         this.entityData.set(DATA_FIREWORK_FLIGHT_DURATION, flightDuration);
+    }
+
+    /** 将弩槽状态（是否为空 + 实际 ItemStack）同步到实体数据 */
+    @Unique
+    private void syncCrossbowFlag() {
+        ItemStack stack = this.crossbowContainer.getItem(0);
+        this.entityData.set(DATA_HAS_CROSSBOW, !stack.isEmpty());
+        this.entityData.set(DATA_CROSSBOW_STACK, stack.copy());
     }
 
     /** 根据烟花火箭的飞行时长计算本次突进的持续 tick 数（客户端与服务端读取同一份同步数据） */
@@ -161,6 +191,21 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     @Override
     public int funnymod$getFireworkCount() {
         return this.entityData.get(DATA_FIREWORK_COUNT);
+    }
+
+    @Override
+    public SimpleContainer funnymod$getCrossbowContainer() {
+        return this.crossbowContainer;
+    }
+
+    @Override
+    public boolean funnymod$hasCrossbow() {
+        return this.entityData.get(DATA_HAS_CROSSBOW);
+    }
+
+    @Override
+    public ItemStack funnymod$getCrossbowStack() {
+        return this.entityData.get(DATA_CROSSBOW_STACK);
     }
 
     @Override
@@ -325,20 +370,27 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
     private void onSave(ValueOutput output, CallbackInfo ci) {
         output.store("Fireworks", ItemStack.CODEC, this.fireworkContainer.getItem(0));
+        output.store("Crossbow", ItemStack.CODEC, this.crossbowContainer.getItem(0));
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     private void onLoad(ValueInput input, CallbackInfo ci) {
         this.fireworkContainer.setItem(0, input.read("Fireworks", ItemStack.CODEC).orElse(ItemStack.EMPTY));
+        this.crossbowContainer.setItem(0, input.read("Crossbow", ItemStack.CODEC).orElse(ItemStack.EMPTY));
     }
 
     @Override
     protected void dropEquipment(ServerLevel level) {
         super.dropEquipment(level);
-        ItemStack stack = this.fireworkContainer.getItem(0);
-        if (!stack.isEmpty()) {
-            this.spawnAtLocation(level, stack);
+        ItemStack firework = this.fireworkContainer.getItem(0);
+        if (!firework.isEmpty()) {
+            this.spawnAtLocation(level, firework);
             this.fireworkContainer.setItem(0, ItemStack.EMPTY);
+        }
+        ItemStack crossbow = this.crossbowContainer.getItem(0);
+        if (!crossbow.isEmpty()) {
+            this.spawnAtLocation(level, crossbow);
+            this.crossbowContainer.setItem(0, ItemStack.EMPTY);
         }
     }
 }

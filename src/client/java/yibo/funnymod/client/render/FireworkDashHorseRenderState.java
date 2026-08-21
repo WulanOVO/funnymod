@@ -16,4 +16,13 @@ public interface FireworkDashHorseRenderState {
 
     /** 设置火箭数量 */
     void funnymod$setFireworkCount(int count);
+
+    /** 弩的 item 渲染状态（由 ItemModelResolver 填充） */
+    ItemStackRenderState funnymod$getCrossbowItem();
+
+    /** 弩槽是否放有弩（决定是否渲染） */
+    boolean funnymod$hasCrossbow();
+
+    /** 设置弩槽状态 */
+    void funnymod$setHasCrossbow(boolean hasCrossbow);
 }

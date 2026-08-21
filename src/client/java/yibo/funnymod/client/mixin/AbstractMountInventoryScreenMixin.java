@@ -27,11 +27,13 @@ public abstract class AbstractMountInventoryScreenMixin {
     private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
 
     @Inject(method = "extractBackground", at = @At("TAIL"))
-    private void renderFireworkSlot(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
+    private void renderExtraSlots(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick, CallbackInfo ci) {
         if (!(this.mount instanceof FireworkDashHorse)) return;
 
-        // 马甲槽背景位置 (leftPos+7, topPos+35)，即马鞍槽 (leftPos+7, topPos+17) 的正下方
         AbstractContainerScreen<?> screen = (AbstractContainerScreen<?>) (Object) this;
+        // 烟花槽背景 (leftPos+7, topPos+35)，与马甲槽位置一致（骷髅马马甲槽不渲染，故复用）
         graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_SPRITE, screen.leftPos + 7, screen.topPos + 35, 18, 18);
+        // 弩槽背景 (leftPos+7, topPos+53)，烟花槽正下方
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_SPRITE, screen.leftPos + 7, screen.topPos + 53, 18, 18);
     }
 }

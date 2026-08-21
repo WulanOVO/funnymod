@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.client.model.HorseElytraModel;
+import yibo.funnymod.client.render.CrossbowLayer;
 import yibo.funnymod.client.render.FireworkRocketLayer;
 import yibo.funnymod.client.render.HorseElytraLayer;
 
@@ -48,5 +49,6 @@ public abstract class UndeadHorseRendererMixin
         HorseElytraModel elytraModel = new HorseElytraModel(context.bakeLayer(ModelLayers.ELYTRA));
         this.addLayer(new HorseElytraLayer(this, elytraModel));
         this.addLayer(new FireworkRocketLayer(this));
+        this.addLayer(new CrossbowLayer(this));
     }
 }

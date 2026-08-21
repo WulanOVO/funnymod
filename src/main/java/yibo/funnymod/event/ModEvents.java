@@ -28,16 +28,9 @@ import yibo.funnymod.Funnymod;
 import yibo.funnymod.entity.ModEntities;
 import yibo.funnymod.entity.SuspiciousSnowGolemEntity;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 public class ModEvents {
     private static final TagKey<Biome> SNOW_GOLEM_SPAWNS =
         TagKey.create(Registries.BIOME, Funnymod.id("snow_golem_spawns"));
-
-    /** 记录已授予「天马行空」进度的玩家，避免每 tick 重复调用 award */
-    private static final Map<UUID, Boolean> PEGASUS_AWARDED = new HashMap<>();
 
     private static final int SPAWN_INTERVAL = 600;       // 每 30 秒尝试一次
     private static final int SPAWN_ATTEMPTS = 4;         // 每次尝试 4 个位置
@@ -55,24 +48,19 @@ public class ModEvents {
 
     /**
      * 检测「天马行空」进度：玩家骑乘装备鞍鞘的骷髅马且正在滑翔时立即触发。
+     * 直接读取玩家对该进度的实际完成状态，避免内存缓存导致已满足但未授予的玩家被永久跳过。
      */
     private static void checkAirborneAdvancement(ServerLevel level) {
+        AdvancementHolder holder = level.getServer().getAdvancements().get(Funnymod.id("pegasus"));
+        if (holder == null) return;
         for (ServerPlayer player : level.players()) {
-            if (PEGASUS_AWARDED.containsKey(player.getUUID())) continue;
+            // 已获得则跳过（基于实际进度状态而非内存缓存）
+            if (player.getAdvancements().getOrStartProgress(holder).isDone()) continue;
             Entity vehicle = player.getVehicle();
             if (!(vehicle instanceof SkeletonHorse horse)) continue;
             ItemStack saddleSlot = horse.getItemBySlot(EquipmentSlot.SADDLE);
             if (saddleSlot.isEmpty() || !saddleSlot.has(DataComponents.GLIDER)) continue;
             if (!horse.isFallFlying()) continue;
-            awardPegasus(level, player);
-            PEGASUS_AWARDED.put(player.getUUID(), Boolean.TRUE);
-        }
-    }
-
-    /** 授予「天马行空」进度 */
-    private static void awardPegasus(ServerLevel level, ServerPlayer player) {
-        AdvancementHolder holder = level.getServer().getAdvancements().get(Funnymod.id("pegasus"));
-        if (holder != null) {
             player.getAdvancements().award(holder, "glide");
         }
     }

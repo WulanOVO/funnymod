@@ -45,9 +45,24 @@ public abstract class AbstractHorseRendererMixin {
             } else {
                 access.funnymod$getFireworkItem().clear();
             }
+
+            boolean hasCrossbow = horse.funnymod$hasCrossbow();
+            access.funnymod$setHasCrossbow(hasCrossbow);
+            if (hasCrossbow) {
+                Minecraft.getInstance().getItemModelResolver().updateForNonLiving(
+                    access.funnymod$getCrossbowItem(),
+                    horse.funnymod$getCrossbowStack(),
+                    ItemDisplayContext.FIXED,
+                    entity
+                );
+            } else {
+                access.funnymod$getCrossbowItem().clear();
+            }
         } else {
             access.funnymod$setFireworkCount(0);
             access.funnymod$getFireworkItem().clear();
+            access.funnymod$setHasCrossbow(false);
+            access.funnymod$getCrossbowItem().clear();
         }
     }
 }
