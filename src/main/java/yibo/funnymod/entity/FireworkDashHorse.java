@@ -1,6 +1,7 @@
 package yibo.funnymod.entity;
 
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -46,6 +47,13 @@ public interface FireworkDashHorse {
      * 触发突进时调用，避免跳跃状态干扰突进。
      */
     void funnymod$resetJumpState();
+
+    /**
+     * 装备弩时，以玩家视角方向发射箭矢，消耗马物品栏中的箭。
+     * 发射间隔 4 tick（无视快速装填），伤害来源为骷髅马，叠加弩的附魔（多重射击、穿透等）。
+     * 仅服务端执行。
+     */
+    void funnymod$shootCrossbow(Player player);
 
     /**
      * 消耗一个烟花火箭，让骷髅马向前突进一段，并生成一个伴飞的烟花火箭实体。

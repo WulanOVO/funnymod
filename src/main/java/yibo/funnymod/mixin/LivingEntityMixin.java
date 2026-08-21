@@ -63,6 +63,19 @@ public abstract class LivingEntityMixin {
     }
 
     /**
+     * 客户端安全网：落地后若滑翔标志位 7 仍为 true（与服务端 {@code updateFallFlying}
+     * 同步延迟或丢失），强制清除，避免鞘翅渲染卡在展开态、移动走滑翔物理导致方向键失控。
+     * 触地 + isFallFlying 是不一致状态，落地本不该继续滑翔。
+     */
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void funnymod$forceClearGlideOnGround(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.level().isClientSide() && self.onGround() && self.isFallFlying()) {
+            self.setSharedFlag(7, false);
+        }
+    }
+
+    /**
      * 鞍鞘耐久到 maxDamage-1（原版 nextDamageWillBreak 状态，失去滑翔资格）时，
      * 把鞍鞘拆成破损鞘翅掉落物 + 普通马鞍，保留骑乘能力、失去滑翔能力。
      */
