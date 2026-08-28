@@ -9,7 +9,6 @@ import yibo.funnymod.entity.SuspiciousSnowGolemEntity;
 
 @Mixin(Creeper.class)
 public class CreeperExplodeMixin {
-
     /**
      * 可疑雪傀儡爆炸前释放背包中所有雪球。
      */

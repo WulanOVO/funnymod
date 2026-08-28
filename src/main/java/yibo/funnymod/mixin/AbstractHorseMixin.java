@@ -18,7 +18,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  */
 @Mixin(AbstractHorse.class)
 public abstract class AbstractHorseMixin {
-
     @Inject(method = "getRiddenRotation", at = @At("RETURN"), cancellable = true)
     private void funnymod$fullPitchWhenGliding(LivingEntity controller, CallbackInfoReturnable<Vec2> cir) {
         AbstractHorse self = (AbstractHorse) (Object) this;

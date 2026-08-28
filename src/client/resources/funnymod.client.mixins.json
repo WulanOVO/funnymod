@@ -5,11 +5,14 @@
   "client": [
     "LocalPlayerMixin",
     "MinecraftMixin",
+    "CameraMixin",
     "AbstractMountInventoryScreenMixin",
     "EquineRenderStateMixin",
     "AbstractHorseRendererMixin",
     "UndeadHorseRendererMixin",
-    "LivingEntityElytraSoundMixin"
+    "LivingEntityElytraSoundMixin",
+    "LivingEntityRenderStateMixin",
+    "LivingEntityRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

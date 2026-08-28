@@ -4,6 +4,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -12,22 +13,63 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import yibo.funnymod.effect.ModEffects;
+import yibo.funnymod.entity.GlidePitchData;
 import yibo.funnymod.entity.RiderJumpInput;
+import yibo.funnymod.util.GlidePitchUtil;
 
 /**
  * 粘脚效果：模拟蜂蜜块，削减跳跃高度（跳一半）让玩家跳不了一格
  */
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin {
+public abstract class LivingEntityMixin implements GlidePitchData {
     @Shadow
     protected abstract boolean canGlide();
 
     @Shadow
     public abstract boolean isFallFlying();
+
+    @Unique
+    private float funnymod$glidePitch;
+    @Unique
+    private float funnymod$glidePitchO;
+    @Unique
+    private float funnymod$glidePitchPeak;
+
+    @Override
+    public float funnymod$getGlidePitch() {
+        return funnymod$glidePitch;
+    }
+
+    @Override
+    public void funnymod$setGlidePitch(float pitch) {
+        funnymod$glidePitch = pitch;
+    }
+
+    @Override
+    public float funnymod$getGlidePitchO() {
+        return funnymod$glidePitchO;
+    }
+
+    @Override
+    public void funnymod$setGlidePitchO(float pitch) {
+        funnymod$glidePitchO = pitch;
+    }
+
+    @Override
+    public float funnymod$getGlidePitchPeak() {
+        return funnymod$glidePitchPeak;
+    }
+
+    @Override
+    public void funnymod$setGlidePitchPeak(float pitch) {
+        funnymod$glidePitchPeak = pitch;
+    }
 
     @Inject(method = "jumpFromGround", at = @At("TAIL"))
     private void reduceStickyFeetJump(CallbackInfo ci) {
@@ -73,6 +115,35 @@ public abstract class LivingEntityMixin {
         if (self.level().isClientSide() && self.onGround() && self.isFallFlying()) {
             self.setSharedFlag(7, false);
         }
+    }
+
+    /**
+     * 每 tick 更新平滑滑翔俯仰：起飞/触地时俯仰在几 tick 内过渡，
+     * 渲染端与相机用 partialTicks 在 O/当前值间插值，避免视角突变。
+     */
+    @Inject(method = "tick", at = @At("TAIL"))
+    private void funnymod$smoothGlidePitch(CallbackInfo ci) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (self.isFallFlying() || funnymod$glidePitch != 0.0f || funnymod$glidePitchO != 0.0f) {
+            GlidePitchUtil.tickGlidePitch(self);
+        }
+    }
+
+    /**
+     * 滑翔俯仰座位：鞍鞘坐骑滑翔时，骑手座位随渲染俯仰一起绕躯干中心旋转，
+     * 骑手贴住鞍座。双端生效（客户端本地玩家用精确视角，服务端用同步视角）。
+     */
+    @Inject(method = "getPassengerRidingPosition", at = @At("RETURN"), cancellable = true)
+    private void funnymod$rotateGlideSeat(Entity passenger, CallbackInfoReturnable<Vec3> cir) {
+        LivingEntity self = (LivingEntity) (Object) this;
+        if (!GlidePitchUtil.shouldApplyGlideRotation(self)) {
+            return;
+        }
+        float pitch = GlidePitchUtil.computeGlidePitch(self, 0.0f);
+        if (GlidePitchUtil.isNegligible(pitch)) {
+            return;
+        }
+        cir.setReturnValue(GlidePitchUtil.rotateSeat(cir.getReturnValue(), self, pitch));
     }
 
     /**

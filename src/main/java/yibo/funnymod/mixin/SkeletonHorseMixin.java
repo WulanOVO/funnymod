@@ -46,98 +46,138 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import yibo.funnymod.entity.FireworkDashHorse;
 
 /**
- * 给骷髅马添加一个只能放烟花火箭的槽位（最多堆叠 64 个），
- * 并支持消耗烟花火箭向前突进（参考鞘翅的烟花火箭伴飞机制）。
- * 突进时长取决于烟花火箭的飞行时长；突进期间撞到生物会对其造成伤害与击退。
+ * 实现骷髅马的诸多模组特性。
  */
 @Mixin(SkeletonHorse.class)
 public abstract class SkeletonHorseMixin extends AbstractHorse implements FireworkDashHorse {
-    /** 突进时的初始水平冲量 */
+    /**
+     * 突进时的初始水平冲量
+     */
     @Unique
     private static final double DASH_IMPULSE = 1.0;
 
-    /** 突进时给予的初始向上速度，让骷髅马轻微跃起 */
+    /**
+     * 突进时给予的初始向上速度，让骷髅马轻微跃起
+     */
     @Unique
     private static final double DASH_UP = 0.35;
 
-    /** 突进持续加速度（每 tick，水平方向） */
+    /**
+     * 突进持续加速度（每 tick，水平方向）
+     */
     @Unique
     private static final double DASH_ACCEL = 0.2;
 
-    /** 突进时长 */
+    /**
+     * 突进时长
+     */
     @Unique
     private static final int DASH_TICKS = 15;
 
-    /** 每个飞行时长额外增加的突进冲量 */
+    /**
+     * 每个飞行时长额外增加的突进冲量
+     */
     @Unique
     private static final double DASH_IMPULSE_PER_FLIGHT = 0.2;
 
-    /** 突进撞到生物时对其造成的伤害 */
+    /**
+     * 突进撞到生物时对其造成的伤害
+     */
     @Unique
     private static final float DASH_HIT_DAMAGE = 5.0f;
 
-    /** 突进撞到生物时的击退强度 */
+    /**
+     * 突进撞到生物时的击退强度
+     */
     @Unique
     private static final double DASH_HIT_KNOCKBACK = 1.5;
 
-    /** 突进冲撞检测范围（在马包围盒四周外扩的距离） */
+    /**
+     * 突进冲撞检测范围（在马包围盒四周外扩的距离）
+     */
     @Unique
     private static final double DASH_HIT_REACH = 1.0;
 
-    /** 骷髅马始终解锁的右侧物品格列数（2列×3行=6格） */
+    /**
+     * 骷髅马始终解锁的右侧物品格列数（2列×3行=6格）
+     */
     @Unique
     private static final int INVENTORY_COLUMNS = 2;
 
-    /** 弩射击箭矢威力（与原版弩 ARROW_POWER 一致） */
+    /**
+     * 弩射击箭矢威力（与原版弩 ARROW_POWER 一致）
+     */
     @Unique
     private static final float ARROW_POWER = 3.15f;
 
-    /** 弩射击最小间隔（tick），无视快速装填 */
+    /**
+     * 弩射击最小间隔（tick），无视快速装填
+     */
     @Unique
     private static final int SHOOT_COOLDOWN_TICKS = 4;
 
-    /** 弩箭目标搜索范围（格） */
+    /**
+     * 弩箭目标搜索范围（格）
+     */
     @Unique
     private static final double TARGET_SEARCH_RANGE = 48.0;
 
-    /** 弩箭瞄准圆锥半角（度） */
+    /**
+     * 弩箭瞄准圆锥半角（度）
+     */
     @Unique
     private static final double AIM_CONE_HALF_ANGLE = 30.0;
 
-    /** 弩箭弹道重力补偿系数（参考骷髅的 0.2） */
+    /**
+     * 弩箭弹道重力补偿系数（参考骷髅的 0.2）
+     */
     @Unique
     private static final float GRAVITY_COMPENSATION = 0.10f;
 
-    /** 上次射击时的 tickCount，用于计算冷却 */
+    /**
+     * 上次射击时的 tickCount，用于计算冷却
+     */
     @Unique
     private int lastShootTick = -SHOOT_COOLDOWN_TICKS;
 
-    /** 同步「烟花槽是否为空」到客户端的实体数据 key */
+    /**
+     * 同步「烟花槽是否为空」到客户端的实体数据 key
+     */
     @Unique
     private static final EntityDataAccessor<Boolean> DATA_HAS_FIREWORK =
-            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.BOOLEAN);
+        SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.BOOLEAN);
 
-    /** 同步烟花火箭的「飞行时长」到客户端，客户端据此计算突进强度 */
+    /**
+     * 同步烟花火箭的「飞行时长」到客户端，客户端据此计算突进强度
+     */
     @Unique
     private static final EntityDataAccessor<Integer> DATA_FIREWORK_FLIGHT_DURATION =
-            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
+        SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
 
-    /** 同步烟花槽中烟花火箭的「数量」到客户端，客户端据此渲染尾部骨架空腔中的火箭 */
+    /**
+     * 同步烟花槽中烟花火箭的「数量」到客户端，客户端据此渲染尾部骨架空腔中的火箭
+     */
     @Unique
     private static final EntityDataAccessor<Integer> DATA_FIREWORK_COUNT =
-            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
+        SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.INT);
 
-    /** 同步「弩槽是否为空」到客户端的实体数据 key */
+    /**
+     * 同步「弩槽是否为空」到客户端的实体数据 key
+     */
     @Unique
     private static final EntityDataAccessor<Boolean> DATA_HAS_CROSSBOW =
-            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.BOOLEAN);
+        SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.BOOLEAN);
 
-    /** 同步弩槽中的实际 ItemStack 到客户端，客户端据此渲染装填状态、附魔光泽、耐久等 */
+    /**
+     * 同步弩槽中的实际 ItemStack 到客户端，客户端据此渲染装填状态、附魔光泽、耐久等
+     */
     @Unique
     private static final EntityDataAccessor<ItemStack> DATA_CROSSBOW_STACK =
-            SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.ITEM_STACK);
+        SynchedEntityData.defineId(SkeletonHorseMixin.class, EntityDataSerializers.ITEM_STACK);
 
-    /** 烟花火箭槽位（单格）。写入变化时同步 hasFirework 标志与飞行时长到客户端 */
+    /**
+     * 烟花火箭槽位（单格）。写入变化时同步 hasFirework 标志与飞行时长到客户端
+     */
     @Unique
     private final SimpleContainer fireworkContainer = new SimpleContainer(1) {
         @Override
@@ -147,7 +187,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         }
     };
 
-    /** 弩槽位（单格，不可堆叠）。写入变化时同步 hasCrossbow 标志到客户端 */
+    /**
+     * 弩槽位（单格，不可堆叠）。写入变化时同步 hasCrossbow 标志到客户端
+     */
     @Unique
     private final SimpleContainer crossbowContainer = new SimpleContainer(1) {
         @Override
@@ -157,15 +199,21 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         }
     };
 
-    /** 突进剩余 tick 数（仅客户端用于本地模拟突进） */
+    /**
+     * 突进剩余 tick 数（仅客户端用于本地模拟突进）
+     */
     @Unique
     private int dashTicks = 0;
 
-    /** 服务端突进（冲撞）结束的 tick 时间戳，用于冲撞判定 */
+    /**
+     * 服务端突进（冲撞）结束的 tick 时间戳，用于冲撞判定
+     */
     @Unique
     private int dashEndTick = 0;
 
-    /** 本次突进已撞过的生物，避免对同一生物反复造成伤害 */
+    /**
+     * 本次突进已撞过的生物，避免对同一生物反复造成伤害
+     */
     @Unique
     private final Set<LivingEntity> rammedEntities = new HashSet<>();
 
@@ -183,7 +231,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         entityData.define(DATA_CROSSBOW_STACK, ItemStack.EMPTY);
     }
 
-    /** 将烟花槽状态（是否为空 + 飞行时长）同步到实体数据 */
+    /**
+     * 将烟花槽状态（是否为空 + 飞行时长）同步到实体数据
+     */
     @Unique
     private void syncFireworkFlag() {
         ItemStack stack = this.fireworkContainer.getItem(0);
@@ -200,7 +250,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         this.entityData.set(DATA_FIREWORK_FLIGHT_DURATION, flightDuration);
     }
 
-    /** 将弩槽状态（是否为空 + 实际 ItemStack）同步到实体数据 */
+    /**
+     * 将弩槽状态（是否为空 + 实际 ItemStack）同步到实体数据
+     */
     @Unique
     private void syncCrossbowFlag() {
         ItemStack stack = this.crossbowContainer.getItem(0);
@@ -208,7 +260,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         this.entityData.set(DATA_CROSSBOW_STACK, stack.copy());
     }
 
-    /** 根据烟花火箭的飞行时长计算本次突进的持续 tick 数（客户端与服务端读取同一份同步数据） */
+    /**
+     * 根据烟花火箭的飞行时长计算本次突进的持续 tick 数（客户端与服务端读取同一份同步数据）
+     */
     @Unique
     private double funnymod$getDashImpulse() {
         int flightDuration = this.entityData.get(DATA_FIREWORK_FLIGHT_DURATION);
@@ -220,7 +274,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         return this.fireworkContainer;
     }
 
-    /** 始终解锁右侧 2 列（6 格）物品栏，无需装备箱子 */
+    /**
+     * 始终解锁右侧 2 列（6 格）物品栏，无需装备箱子
+     */
     @Override
     public int getInventoryColumns() {
         return INVENTORY_COLUMNS;
@@ -289,7 +345,8 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         // 在 30° 圆锥范围内搜索距离主轴最近的生物
         Vec3 lookVec = player.getViewVector(1.0f);
         Vec3 horsePos = this.position();
-        AABB searchBox = AABB.ofSize(horsePos, TARGET_SEARCH_RANGE * 2, TARGET_SEARCH_RANGE * 2, TARGET_SEARCH_RANGE * 2);
+        AABB searchBox = AABB.ofSize(
+            horsePos, TARGET_SEARCH_RANGE * 2, TARGET_SEARCH_RANGE * 2, TARGET_SEARCH_RANGE * 2);
         LivingEntity bestTarget = null;
         double bestAngle = AIM_CONE_HALF_ANGLE;
 
@@ -317,9 +374,10 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             double zd = bestTarget.getZ() - this.getZ();
             double distanceToTarget = Math.sqrt(xd * xd + zd * zd);
             baseDir = new Vector3f(
-                    (float) xd,
-                    (float) (yd + distanceToTarget * GRAVITY_COMPENSATION),
-                    (float) zd);
+                (float) xd,
+                (float) (yd + distanceToTarget * GRAVITY_COMPENSATION),
+                (float) zd
+            );
         } else {
             // 无目标：向正前方发射
             baseDir = lookVec.toVector3f();
@@ -340,7 +398,7 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
 
             // 围绕 up 向量旋转基础方向，产生多重射击散射
             Quaternionf rotQuat = new Quaternionf().setAngleAxis(
-                    angle * (Math.PI / 180.0), upVec.x, upVec.y, upVec.z);
+                angle * (Math.PI / 180.0), upVec.x, upVec.y, upVec.z);
             Vector3f shotVec = new Vector3f(baseDir).rotate(rotQuat);
 
             // 使用原版 ArrowItem.createArrow 创建箭矢（正确处理药箭、光灵箭等）
@@ -352,8 +410,10 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             arrow.pickup = AbstractArrow.Pickup.ALLOWED;
 
             // 发射并应用附魔（applyOnProjectileSpawned 自动处理穿透、火焰等）
-            Projectile.spawnProjectile(arrow, serverLevel, arrowCopy, a ->
-                    a.shoot(shotVec.x(), shotVec.y(), shotVec.z(), ARROW_POWER, 1.0f));
+            Projectile.spawnProjectile(
+                arrow, serverLevel, arrowCopy, a ->
+                    a.shoot(shotVec.x(), shotVec.y(), shotVec.z(), ARROW_POWER, 1.0f)
+            );
         }
 
         // 消耗一支箭（多重射击只消耗 1 发弹药）
@@ -408,9 +468,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             Vec3 forward = this.getLookAngle();
             Vec3 movement = this.getDeltaMovement();
             this.setDeltaMovement(
-                    forward.x * this.funnymod$getDashImpulse(),
-                    Math.max(movement.y, DASH_UP),
-                    forward.z * this.funnymod$getDashImpulse()
+                forward.x * this.funnymod$getDashImpulse(),
+                Math.max(movement.y, DASH_UP),
+                forward.z * this.funnymod$getDashImpulse()
             );
             this.dashTicks = DASH_TICKS;
         }
@@ -428,11 +488,11 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
     /**
      * 覆盖 tickRidden。
      * 客户端：突进期间持续加速。
-     *   - 装备鞍鞘：复刻 {@link FireworkRocketEntity#tick()} 的加速公式
-     *     {@code new_delta = 0.5 * old + 0.85 * lookAngle}，
-     *     速度平滑收敛到 {@code 1.5 * lookAngle}，与玩家鞘翅+烟花火箭的飞行手感一致。
-     *     同时突进期间自动保持滑翔（setSharedFlag(7,true)），确保走 travelFallFlying。
-     *   - 未装备鞍鞘：走原始的恒定加速度突进。
+     * - 装备鞍鞘：复刻 {@link FireworkRocketEntity#tick()} 的加速公式
+     * {@code new_delta = 0.5 * old + 0.85 * lookAngle}，
+     * 速度平滑收敛到 {@code 1.5 * lookAngle}，与玩家鞘翅+烟花火箭的飞行手感一致。
+     * 同时突进期间自动保持滑翔（setSharedFlag(7,true)），确保走 travelFallFlying。
+     * - 未装备鞍鞘：走原始的恒定加速度突进。
      * 服务端：突进期间检测冲撞，对撞到的生物造成伤害与击退。
      */
     @Override
@@ -452,9 +512,10 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
                     Vec3 look = this.getLookAngle();
                     Vec3 movement = this.getDeltaMovement();
                     this.setDeltaMovement(movement.add(
-                            look.x * 0.1 + (look.x * 1.5 - movement.x) * 0.5,
-                            look.y * 0.1 + (look.y * 1.5 - movement.y) * 0.5,
-                            look.z * 0.1 + (look.z * 1.5 - movement.z) * 0.5));
+                        look.x * 0.1 + (look.x * 1.5 - movement.x) * 0.5,
+                        look.y * 0.1 + (look.y * 1.5 - movement.y) * 0.5,
+                        look.z * 0.1 + (look.z * 1.5 - movement.z) * 0.5
+                    ));
                 } else {
                     Vec3 forward = this.getLookAngle();
                     this.addDeltaMovement(new Vec3(forward.x * DASH_ACCEL, 0.0, forward.z * DASH_ACCEL));
@@ -465,9 +526,9 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             // 服务端：突进期间若装备鞍鞘且离地，也保持滑翔状态（与客户端同步），
             // 使 isFallFlying() 在服务端为 true，用于进度检测等服务端逻辑
             if (this.tickCount < this.dashEndTick
-                    && this.funnymod$hasSaddleElytra()
-                    && !this.onGround()
-                    && !this.isFallFlying()) {
+                && this.funnymod$hasSaddleElytra()
+                && !this.onGround()
+                && !this.isFallFlying()) {
                 this.setSharedFlag(7, true);
             }
             // 服务端：冲撞判定（伤害与击退需服务端权威）
@@ -498,17 +559,19 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
         super.checkFallDamage(ya, onGround, onState, pos);
     }
 
-    /** 服务端：突进期间对撞到的生物造成伤害与击退 */
+    /**
+     * 服务端：突进期间对撞到的生物造成伤害与击退
+     */
     @Unique
     private void applyRammingDamage(ServerLevel level) {
         AABB box = this.getBoundingBox().inflate(DASH_HIT_REACH);
         List<LivingEntity> targets = this.level().getEntitiesOfClass(
-                LivingEntity.class,
-                box,
-                entity -> entity != this
-                        && entity.isAlive()
-                        && !this.hasPassenger(entity)
-                        && !this.rammedEntities.contains(entity)
+            LivingEntity.class,
+            box,
+            entity -> entity != this
+                      && entity.isAlive()
+                      && !this.hasPassenger(entity)
+                      && !this.rammedEntities.contains(entity)
         );
         for (LivingEntity target : targets) {
             this.rammedEntities.add(target);
