@@ -424,6 +424,11 @@ public abstract class SkeletonHorseMixin extends AbstractHorse implements Firewo
             this.inventory.setChanged();
         }
 
+        // 消耗弩耐久（与原版玩家射弩一致：每次 1 点），耐久变化同步到客户端耐久条渲染
+        crossbow.hurtAndBreak(1, serverLevel, null, item ->
+            this.playSound(SoundEvents.ITEM_BREAK.value(), 0.8f, 0.8f + this.random.nextFloat() * 0.4f));
+        this.syncCrossbowFlag();
+
         this.playSound(SoundEvents.CROSSBOW_SHOOT, 1.0f, 1.0f);
         this.lastShootTick = this.tickCount;
     }
